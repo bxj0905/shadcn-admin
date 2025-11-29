@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   type SortingState,
   type VisibilityState,
@@ -26,6 +27,7 @@ import { roles } from '../data/data'
 import { type User } from '../data/schema'
 import { DataTableBulkActions } from './data-table-bulk-actions'
 import { usersColumns as columns } from './users-columns'
+import { fetchSystemRoles } from '@/services/roles'
 
 type DataTableProps = {
   data: User[]
@@ -61,6 +63,11 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
       { columnId: 'status', searchKey: 'status', type: 'array' },
       { columnId: 'role', searchKey: 'role', type: 'array' },
     ],
+  })
+
+  const { data: systemRoles = [] } = useQuery({
+    queryKey: ['system-roles'],
+    queryFn: fetchSystemRoles,
   })
 
   // eslint-disable-next-line react-hooks/incompatible-library
@@ -101,23 +108,33 @@ export function UsersTable({ data, search, navigate }: DataTableProps) {
     >
       <DataTableToolbar
         table={table}
-        searchPlaceholder='Filter users...'
+        searchPlaceholder='搜索用户...'
         searchKey='username'
         filters={[
           {
             columnId: 'status',
-            title: 'Status',
+            title: '状态',
             options: [
-              { label: 'Active', value: 'active' },
-              { label: 'Inactive', value: 'inactive' },
-              { label: 'Invited', value: 'invited' },
-              { label: 'Suspended', value: 'suspended' },
+              { label: '启用', value: 'active' },
+              { label: '禁用', value: 'inactive' },
             ],
           },
           {
             columnId: 'role',
-            title: 'Role',
-            options: roles.map((role) => ({ ...role })),
+            title: '角色',
+            options:
+              systemRoles.length > 0
+                ? systemRoles.map((r) => ({
+                    label: r.name,
+                    // 将后端角色 code 映射到前端 role 值
+                    value:
+                      r.code === 'super_admin'
+                        ? 'superadmin'
+                        : r.code === 'admin'
+                          ? 'admin'
+                          : 'user',
+                  }))
+                : roles.map((role) => ({ label: role.label, value: role.value })),
           },
         ]}
       />

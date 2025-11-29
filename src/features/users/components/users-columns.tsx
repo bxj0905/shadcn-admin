@@ -6,6 +6,8 @@ import { DataTableColumnHeader } from '@/components/data-table'
 import { LongText } from '@/components/long-text'
 import { callTypes, roles } from '../data/data'
 import { type User } from '../data/schema'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { updateUserStatus } from '@/services/users'
 import { DataTableRowActions } from './data-table-row-actions'
 
 export const usersColumns: ColumnDef<User>[] = [
@@ -39,7 +41,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'username',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Username' />
+      <DataTableColumnHeader column={column} title='用户名' />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-36 ps-3'>{row.getValue('username')}</LongText>
@@ -55,7 +57,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     id: 'fullName',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Name' />
+      <DataTableColumnHeader column={column} title='姓名' />
     ),
     cell: ({ row }) => {
       const { firstName, lastName } = row.original
@@ -67,7 +69,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'email',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Email' />
+      <DataTableColumnHeader column={column} title='邮箱' />
     ),
     cell: ({ row }) => (
       <div className='w-fit ps-2 text-nowrap'>{row.getValue('email')}</div>
@@ -76,7 +78,7 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'phoneNumber',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Phone Number' />
+      <DataTableColumnHeader column={column} title='手机号' />
     ),
     cell: ({ row }) => <div>{row.getValue('phoneNumber')}</div>,
     enableSorting: false,
@@ -84,17 +86,45 @@ export const usersColumns: ColumnDef<User>[] = [
   {
     accessorKey: 'status',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Status' />
+      <DataTableColumnHeader column={column} title='状态' />
     ),
     cell: ({ row }) => {
-      const { status } = row.original
-      const badgeColor = callTypes.get(status)
+      const { id, status } = row.original
+      const badgeColor =
+        status === 'active'
+          ? 'bg-green-500 text-white border-transparent'
+          : status === 'inactive'
+            ? 'bg-red-500 text-white border-transparent'
+            : callTypes.get(status)
+      const queryClient = useQueryClient()
+      const mutation = useMutation({
+        mutationFn: (nextStatus: 'active' | 'inactive') => {
+          const numeric = nextStatus === 'active' ? 1 : 0
+          return updateUserStatus(id, numeric)
+        },
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['users'] })
+        },
+      })
+
+      const handleToggle = () => {
+        const next = status === 'active' ? 'inactive' : 'active'
+        mutation.mutate(next as 'active' | 'inactive')
+      }
       return (
-        <div className='flex space-x-2'>
-          <Badge variant='outline' className={cn('capitalize', badgeColor)}>
+        <button
+          type='button'
+          onClick={handleToggle}
+          className='inline-flex items-center w-[72px] justify-center'
+          disabled={mutation.isLoading}
+        >
+          <Badge
+            variant='outline'
+            className={cn('capitalize w-full justify-center', badgeColor)}
+          >
             {row.getValue('status')}
           </Badge>
-        </div>
+        </button>
       )
     },
     filterFn: (row, id, value) => {
@@ -104,24 +134,38 @@ export const usersColumns: ColumnDef<User>[] = [
     enableSorting: false,
   },
   {
+    accessorKey: 'accountSource',
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='账号来源' />
+    ),
+    cell: ({ row }) => (
+      <span className='text-xs text-muted-foreground'>
+        {row.getValue('accountSource')}
+      </span>
+    ),
+    enableSorting: false,
+  },
+  {
     accessorKey: 'role',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Role' />
+      <DataTableColumnHeader column={column} title='角色' />
     ),
     cell: ({ row }) => {
-      const { role } = row.original
+      const { role, roleName } = row.original
       const userType = roles.find(({ value }) => value === role)
 
-      if (!userType) {
+      const displayLabel = roleName || userType?.label || row.getValue('role')
+
+      if (!displayLabel) {
         return null
       }
 
       return (
         <div className='flex items-center gap-x-2'>
-          {userType.icon && (
+          {userType?.icon && (
             <userType.icon size={16} className='text-muted-foreground' />
           )}
-          <span className='text-sm capitalize'>{row.getValue('role')}</span>
+          <span className='text-sm'>{displayLabel}</span>
         </div>
       )
     },

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import {
   QueryCache,
   QueryClient,
@@ -17,6 +17,18 @@ import { ThemeProvider } from './context/theme-provider'
 import { routeTree } from './routeTree.gen'
 // Styles
 import './styles/index.css'
+import './lib/i18n'
+
+axios.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().auth.accessToken
+  if (token) {
+    if (!config.headers) {
+      config.headers = {} as typeof config.headers
+    }
+    ;(config.headers as any).Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,7 +66,7 @@ const queryClient = new QueryClient({
         if (error.response?.status === 401) {
           toast.error('Session expired!')
           useAuthStore.getState().auth.reset()
-          const redirect = `${router.history.location.href}`
+          const redirect = `${router.history.location.pathname}${router.history.location.search ?? ''}`
           router.navigate({ to: '/sign-in', search: { redirect } })
         }
         if (error.response?.status === 500) {

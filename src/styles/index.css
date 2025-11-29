@@ -36,6 +36,12 @@
       font-size: 16px !important;
     }
   }
+
+  /* Hide native password reveal button (e.g. on Edge) to avoid double eye icons */
+  input[type='password']::-ms-reveal,
+  input[type='password']::-ms-clear {
+    display: none;
+  }
 }
 
 @utility container {

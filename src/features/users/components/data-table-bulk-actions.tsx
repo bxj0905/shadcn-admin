@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { type Table } from '@tanstack/react-table'
 import { Trash2, UserX, UserCheck, Mail } from 'lucide-react'
 import { toast } from 'sonner'
-import { sleep } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { sleep } from '@/lib/utils'
 import {
   Tooltip,
   TooltipContent,
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/tooltip'
 import { DataTableBulkActions as BulkActionsToolbar } from '@/components/data-table'
 import { type User } from '../data/schema'
+import { updateUserStatus } from '@/services/users'
 import { UsersMultiDeleteDialog } from './users-multi-delete-dialog'
 
 type DataTableBulkActionsProps<TData> = {
@@ -22,18 +24,34 @@ export function DataTableBulkActions<TData>({
 }: DataTableBulkActionsProps<TData>) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const selectedRows = table.getFilteredSelectedRowModel().rows
+  const queryClient = useQueryClient()
 
-  const handleBulkStatusChange = (status: 'active' | 'inactive') => {
+  const handleBulkStatusChange = async (status: 'active' | 'inactive') => {
     const selectedUsers = selectedRows.map((row) => row.original as User)
-    toast.promise(sleep(2000), {
-      loading: `${status === 'active' ? 'Activating' : 'Deactivating'} users...`,
-      success: () => {
-        table.resetRowSelection()
-        return `${status === 'active' ? 'Activated' : 'Deactivated'} ${selectedUsers.length} user${selectedUsers.length > 1 ? 's' : ''}`
-      },
-      error: `Error ${status === 'active' ? 'activating' : 'deactivating'} users`,
-    })
-    table.resetRowSelection()
+    const nextStatus = status === 'active' ? 1 : 0
+
+    if (!selectedUsers.length) return
+
+    toast.promise(
+      Promise.all(
+        selectedUsers.map((user) => updateUserStatus(user.id, nextStatus))
+      ),
+      {
+        loading:
+          status === 'active' ? '正在启用所选用户...' : '正在禁用所选用户...',
+        success: async () => {
+          await queryClient.invalidateQueries({ queryKey: ['users'] })
+          table.resetRowSelection()
+          return `${status === 'active' ? '已启用' : '已禁用'} ${
+            selectedUsers.length
+          } 个用户`
+        },
+        error:
+          status === 'active'
+            ? '批量启用用户失败'
+            : '批量禁用用户失败',
+      }
+    )
   }
 
   const handleBulkInvite = () => {

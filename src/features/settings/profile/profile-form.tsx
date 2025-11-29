@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link } from '@tanstack/react-router'
+import { useAuthStore } from '@/stores/auth-store'
 import { showSubmittedData } from '@/lib/show-submitted-data'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -47,16 +48,17 @@ const profileFormSchema = z.object({
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<ProfileFormValues> = {
-  bio: 'I own a computer.',
-  urls: [
-    { value: 'https://shadcn.com' },
-    { value: 'http://twitter.com/shadcn' },
-  ],
-}
-
 export function ProfileForm() {
+  const { auth } = useAuthStore()
+  const defaultValues: Partial<ProfileFormValues> = {
+    username: auth.user?.username,
+    email: auth.user?.email,
+    bio: 'I own a computer.',
+    urls: [
+      { value: 'https://shadcn.com' },
+      { value: 'http://twitter.com/shadcn' },
+    ],
+  }
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues,

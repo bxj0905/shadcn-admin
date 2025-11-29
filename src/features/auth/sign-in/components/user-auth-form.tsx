@@ -7,7 +7,8 @@ import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { useAuthStore } from '@/stores/auth-store'
-import { sleep, cn } from '@/lib/utils'
+import { login, type AuthProvider } from '@/services/auth'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -21,9 +22,11 @@ import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 
 const formSchema = z.object({
-  email: z.email({
-    error: (iss) => (iss.input === '' ? 'Please enter your email' : undefined),
-  }),
+  email: z
+    .string()
+    .min(1, 'Please enter your email or username')
+    .email('Please enter a valid email address')
+    .or(z.string().min(1, 'Please enter your email or username')),
   password: z
     .string()
     .min(1, 'Please enter your password')
@@ -51,34 +54,37 @@ export function UserAuthForm({
     },
   })
 
-  function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    toast.promise(sleep(2000), {
-      loading: 'Signing in...',
-      success: () => {
-        setIsLoading(false)
+    await toast.promise(
+      // provider 使用 auto，由后端自动判断是本地账号还是 LDAP 账号
+      login('auto' as AuthProvider, data.email, data.password),
+      {
+        loading: 'Signing in...',
+        success: (res) => {
+          const exp = Date.now() + res.expiresIn * 1000
 
-        // Mock successful authentication with expiry computed at success time
-        const mockUser = {
-          accountNo: 'ACC001',
-          email: data.email,
-          role: ['user'],
-          exp: Date.now() + 24 * 60 * 60 * 1000, // 24 hours from now
-        }
+          auth.setUser({
+            ...res.user,
+            exp,
+          })
+          auth.setAccessToken(res.accessToken)
 
-        // Set user and access token
-        auth.setUser(mockUser)
-        auth.setAccessToken('mock-access-token')
+          const targetPath = redirectTo || '/'
+          navigate({ to: targetPath, replace: true })
 
-        // Redirect to the stored location or default to dashboard
-        const targetPath = redirectTo || '/'
-        navigate({ to: targetPath, replace: true })
+          return `Welcome back, ${res.user.email}!`
+        },
+        error: (err) => {
+          // eslint-disable-next-line no-console
+          console.error(err)
+          return 'Sign in failed'
+        },
+      }
+    )
 
-        return `Welcome back, ${data.email}!`
-      },
-      error: 'Error',
-    })
+    setIsLoading(false)
   }
 
   return (

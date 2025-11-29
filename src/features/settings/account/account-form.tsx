@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
+import { useAuthStore } from '@/stores/auth-store'
 import { CaretSortIcon, CheckIcon } from '@radix-ui/react-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { showSubmittedData } from '@/lib/show-submitted-data'
@@ -54,12 +55,11 @@ const accountFormSchema = z.object({
 
 type AccountFormValues = z.infer<typeof accountFormSchema>
 
-// This can come from your database or API.
-const defaultValues: Partial<AccountFormValues> = {
-  name: '',
-}
-
 export function AccountForm() {
+  const { auth } = useAuthStore()
+  const defaultValues: Partial<AccountFormValues> = {
+    name: auth.user?.name || '',
+  }
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues,

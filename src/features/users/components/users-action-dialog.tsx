@@ -1,9 +1,10 @@
-'use client'
+"use client"
 
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { showSubmittedData } from '@/lib/show-submitted-data'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -26,13 +27,19 @@ import { PasswordInput } from '@/components/password-input'
 import { SelectDropdown } from '@/components/select-dropdown'
 import { roles } from '../data/data'
 import { type User } from '../data/schema'
+import { createUser, updateUser } from '@/services/users'
+import { fetchSystemRoles } from '@/services/roles'
 
 const formSchema = z
   .object({
-    firstName: z.string().min(1, 'First Name is required.'),
-    lastName: z.string().min(1, 'Last Name is required.'),
+    // 用 firstName 作为显示名字段，lastName 暂不使用
+    firstName: z.string().optional().or(z.literal('')),
+    lastName: z.string().optional().or(z.literal('')),
     username: z.string().min(1, 'Username is required.'),
-    phoneNumber: z.string().min(1, 'Phone number is required.'),
+    phoneNumber: z
+      .string()
+      .optional()
+      .or(z.literal('')),
     email: z.email({
       error: (iss) => (iss.input === '' ? 'Email is required.' : undefined),
     }),
@@ -83,7 +90,10 @@ const formSchema = z
   )
   .refine(
     ({ isEdit, password, confirmPassword }) => {
+      // 编辑模式且未填写密码：不校验确认密码
       if (isEdit && !password) return true
+      // 只有在填写了密码时才需要确认密码
+      if (!password) return true
       return password === confirmPassword
     },
     {
@@ -105,6 +115,15 @@ export function UsersActionDialog({
   onOpenChange,
 }: UserActionDialogProps) {
   const isEdit = !!currentRow
+  const [submitting, setSubmitting] = useState(false)
+  const queryClient = useQueryClient()
+
+  const { data: systemRoles = [] } = useQuery({
+    queryKey: ['system-roles'],
+    queryFn: fetchSystemRoles,
+  })
+  const isExternalUser =
+    isEdit && currentRow?.accountSource && currentRow.accountSource !== '本地账号'
   const form = useForm<UserForm>({
     resolver: zodResolver(formSchema),
     defaultValues: isEdit
@@ -127,10 +146,36 @@ export function UsersActionDialog({
         },
   })
 
-  const onSubmit = (values: UserForm) => {
-    form.reset()
-    showSubmittedData(values)
-    onOpenChange(false)
+  const onSubmit = async (values: UserForm) => {
+    try {
+      setSubmitting(true)
+      if (isEdit && currentRow) {
+        await updateUser(currentRow.id, {
+          firstName: values.firstName || '',
+          lastName: '',
+          username: values.username,
+          email: values.email,
+          phoneNumber: values.phoneNumber,
+          role: values.role,
+          password: values.password || undefined,
+        })
+      } else {
+        await createUser({
+          firstName: values.firstName || '',
+          lastName: '',
+          username: values.username,
+          email: values.email,
+          phoneNumber: values.phoneNumber,
+          role: values.role,
+          password: values.password,
+        })
+      }
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+      form.reset()
+      onOpenChange(false)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const isPasswordTouched = !!form.formState.dirtyFields.password
@@ -145,10 +190,9 @@ export function UsersActionDialog({
     >
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader className='text-start'>
-          <DialogTitle>{isEdit ? 'Edit User' : 'Add New User'}</DialogTitle>
+          <DialogTitle>{isEdit ? '编辑用户' : '新增用户'}</DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update the user here. ' : 'Create new user here. '}
-            Click save when you&apos;re done.
+            {isEdit ? '在这里更新用户信息。' : '在这里创建新用户。'}
           </DialogDescription>
         </DialogHeader>
         <div className='h-[26.25rem] w-[calc(100%+0.75rem)] overflow-y-auto py-1 pe-3'>
@@ -164,33 +208,14 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      First Name
+                      显示名
                     </FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='John'
+                        placeholder='张三'
                         className='col-span-4'
                         autoComplete='off'
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage className='col-span-4 col-start-3' />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='lastName'
-                render={({ field }) => (
-                  <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>
-                      Last Name
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder='Doe'
-                        className='col-span-4'
-                        autoComplete='off'
+                        disabled={isExternalUser}
                         {...field}
                       />
                     </FormControl>
@@ -204,12 +229,13 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Username
+                      用户名
                     </FormLabel>
                     <FormControl>
                       <Input
                         placeholder='john_doe'
                         className='col-span-4'
+                        disabled={isExternalUser}
                         {...field}
                       />
                     </FormControl>
@@ -222,11 +248,12 @@ export function UsersActionDialog({
                 name='email'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>Email</FormLabel>
+                    <FormLabel className='col-span-2 text-end'>邮箱</FormLabel>
                     <FormControl>
                       <Input
                         placeholder='john.doe@gmail.com'
                         className='col-span-4'
+                        disabled={isExternalUser}
                         {...field}
                       />
                     </FormControl>
@@ -240,12 +267,13 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Phone Number
+                      手机号
                     </FormLabel>
                     <FormControl>
                       <Input
                         placeholder='+123456789'
                         className='col-span-4'
+                        disabled={isExternalUser}
                         {...field}
                       />
                     </FormControl>
@@ -258,16 +286,26 @@ export function UsersActionDialog({
                 name='role'
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
-                    <FormLabel className='col-span-2 text-end'>Role</FormLabel>
+                    <FormLabel className='col-span-2 text-end'>角色</FormLabel>
                     <SelectDropdown
                       defaultValue={field.value}
                       onValueChange={field.onChange}
-                      placeholder='Select a role'
+                      placeholder='请选择角色'
                       className='col-span-4'
-                      items={roles.map(({ label, value }) => ({
-                        label,
-                        value,
-                      }))}
+                      items={
+                        systemRoles.length
+                          ? systemRoles.map((r) => ({
+                              label: r.name,
+                              // map DB code to front-end role key
+                              value:
+                                r.code === 'super_admin'
+                                  ? 'superadmin'
+                                  : r.code === 'admin'
+                                    ? 'admin'
+                                    : 'user',
+                            }))
+                          : roles.map(({ label, value }) => ({ label, value }))
+                      }
                     />
                     <FormMessage className='col-span-4 col-start-3' />
                   </FormItem>
@@ -279,12 +317,14 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Password
+                      密码
                     </FormLabel>
                     <FormControl>
                       <PasswordInput
+                        autoComplete='new-password'
                         placeholder='e.g., S3cur3P@ssw0rd'
                         className='col-span-4'
+                        disabled={isExternalUser}
                         {...field}
                       />
                     </FormControl>
@@ -298,11 +338,12 @@ export function UsersActionDialog({
                 render={({ field }) => (
                   <FormItem className='grid grid-cols-6 items-center space-y-0 gap-x-4 gap-y-1'>
                     <FormLabel className='col-span-2 text-end'>
-                      Confirm Password
+                      确认密码
                     </FormLabel>
                     <FormControl>
                       <PasswordInput
-                        disabled={!isPasswordTouched}
+                        autoComplete='new-password'
+                        disabled={!isPasswordTouched || isExternalUser}
                         placeholder='e.g., S3cur3P@ssw0rd'
                         className='col-span-4'
                         {...field}
@@ -316,8 +357,8 @@ export function UsersActionDialog({
           </Form>
         </div>
         <DialogFooter>
-          <Button type='submit' form='user-form'>
-            Save changes
+          <Button type='submit' form='user-form' disabled={submitting}>
+            {submitting ? '保存中...' : '保存'}
           </Button>
         </DialogFooter>
       </DialogContent>
