@@ -18,6 +18,17 @@ export function AppSidebar() {
   const { auth } = useAuthStore()
 
   const currentUser = auth.user
+  const isAdmin = !!currentUser &&
+    (currentUser.roles.includes('admin') || currentUser.roles.includes('super_admin'))
+
+  const navGroups = isAdmin
+    ? sidebarData.navGroups
+    : sidebarData.navGroups.map((group) => ({
+        ...group,
+        items: group.items.filter(
+          (item) => item.url !== '/users' && item.url !== '/teams' && item.url !== '/team-members',
+        ) as typeof group.items,
+      }))
   const navUser = currentUser
     ? {
         name: currentUser.name || currentUser.username,
@@ -29,14 +40,14 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>
-        <TeamSwitcher teams={sidebarData.teams} />
+        <TeamSwitcher />
 
         {/* Replace <TeamSwitch /> with the following <AppTitle />
          /* if you want to use the normal app title instead of TeamSwitch dropdown */}
         {/* <AppTitle /> */}
       </SidebarHeader>
       <SidebarContent>
-        {sidebarData.navGroups.map((props) => (
+        {navGroups.map((props) => (
           <NavGroup key={props.title} {...props} />
         ))}
       </SidebarContent>

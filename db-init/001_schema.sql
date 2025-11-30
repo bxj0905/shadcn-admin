@@ -311,7 +311,7 @@ ON CONFLICT (code) DO UPDATE
 
 INSERT INTO team_roles (code, name, description)
 VALUES
-  ('owner',      '拥有者',   '团队创建者/拥有者，拥有该团队的全部权限'),
+  ('owner',      '所有者',   '团队创建者/所有者，拥有该团队的全部权限'),
   ('maintainer', '维护者',   '可以管理团队的大部分资源'),
   ('member',     '成员',     '普通成员，日常使用团队资源')
 ON CONFLICT (code) DO UPDATE
@@ -342,6 +342,48 @@ ON CONFLICT (code) DO UPDATE
   SET name = EXCLUDED.name,
       description = EXCLUDED.description,
       category = EXCLUDED.category;
+
+-- 初始化团队角色与团队权限的关系
+-- owner: 拥有全部团队权限
+-- maintainer: 与 owner 基本一致，用于超级管理员在团队内的默认角色
+-- member: 只读为主
+INSERT INTO team_role_permissions (team_role_id, team_permission_id)
+SELECT tr.id AS team_role_id, tp.id AS team_permission_id
+FROM team_roles tr
+JOIN team_permissions tp ON tp.code IN (
+  'team.member.view',
+  'team.member.manage',
+  'team.settings.view',
+  'team.settings.manage',
+  'team.project.view',
+  'team.project.manage'
+)
+WHERE tr.code = 'owner'
+ON CONFLICT (team_role_id, team_permission_id) DO NOTHING;
+
+INSERT INTO team_role_permissions (team_role_id, team_permission_id)
+SELECT tr.id AS team_role_id, tp.id AS team_permission_id
+FROM team_roles tr
+JOIN team_permissions tp ON tp.code IN (
+  'team.member.view',
+  'team.member.manage',
+  'team.settings.view',
+  'team.settings.manage',
+  'team.project.view',
+  'team.project.manage'
+)
+WHERE tr.code = 'maintainer'
+ON CONFLICT (team_role_id, team_permission_id) DO NOTHING;
+
+INSERT INTO team_role_permissions (team_role_id, team_permission_id)
+SELECT tr.id AS team_role_id, tp.id AS team_permission_id
+FROM team_roles tr
+JOIN team_permissions tp ON tp.code IN (
+  'team.member.view',
+  'team.project.view'
+)
+WHERE tr.code = 'member'
+ON CONFLICT (team_role_id, team_permission_id) DO NOTHING;
 
 INSERT INTO system_settings (id, site_title, site_subtitle, logo_url, logo_format)
 VALUES (1, 'Nuxt Portal', 'Next-gen admin portal', NULL, NULL)

@@ -83,6 +83,18 @@ export const sidebarData: SidebarData = {
           url: '/users',
           icon: Users,
         },
+        {
+          title: 'Teams',
+          i18nKey: 'sidebar.nav.teams',
+          url: '/teams',
+          icon: Users,
+        },
+        {
+          title: 'Team Members',
+          i18nKey: 'sidebar.nav.teamMembers',
+          url: '/team-members',
+          icon: Users,
+        },
         // LDAP 相关演示页面入口已去掉，实际同步入口在 /users 页面的“同步 LDAP 用户”按钮
       ],
     },
