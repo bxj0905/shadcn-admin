@@ -4,11 +4,13 @@ import { useState } from 'react'
 import { type Table } from '@tanstack/react-table'
 import { AlertTriangle } from 'lucide-react'
 import { toast } from 'sonner'
-import { sleep } from '@/lib/utils'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { deleteUser } from '@/services/users'
+import { type User } from '../data/schema'
 
 type UserMultiDeleteDialogProps<TData> = {
   open: boolean
@@ -27,23 +29,47 @@ export function UsersMultiDeleteDialog<TData>({
 
   const selectedRows = table.getFilteredSelectedRowModel().rows
 
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: async (rows: typeof selectedRows) => {
+      const users = rows.map((r) => r.original as User)
+
+      const localUsers = users.filter(
+        (u) => !u.accountSource || u.accountSource === '本地账号',
+      )
+
+      if (localUsers.length === 0) {
+        throw new Error('No local users selected to delete')
+      }
+
+      await Promise.all(localUsers.map((u) => deleteUser(u.id)))
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['users'] })
+      table.resetRowSelection()
+    },
+  })
+
   const handleDelete = () => {
     if (value.trim() !== CONFIRM_WORD) {
       toast.error(`Please type "${CONFIRM_WORD}" to confirm.`)
       return
     }
 
-    onOpenChange(false)
-
-    toast.promise(sleep(2000), {
-      loading: 'Deleting users...',
-      success: () => {
-        table.resetRowSelection()
-        return `Deleted ${selectedRows.length} ${
-          selectedRows.length > 1 ? 'users' : 'user'
-        }`
+    mutation.mutate(selectedRows, {
+      onSuccess: () => {
+        onOpenChange(false)
+        toast.success(
+          `Deleted ${selectedRows.length} ${
+            selectedRows.length > 1 ? 'users' : 'user'
+          }`,
+        )
       },
-      error: 'Error',
+      onError: (err) => {
+        // eslint-disable-next-line no-console
+        console.error(err)
+        toast.error('Failed to delete selected users')
+      },
     })
   }
 
@@ -52,7 +78,7 @@ export function UsersMultiDeleteDialog<TData>({
       open={open}
       onOpenChange={onOpenChange}
       handleConfirm={handleDelete}
-      disabled={value.trim() !== CONFIRM_WORD}
+      disabled={value.trim() !== CONFIRM_WORD || mutation.isPending}
       title={
         <span className='text-destructive'>
           <AlertTriangle

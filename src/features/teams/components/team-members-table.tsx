@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   type ColumnDef,
   type SortingState,
@@ -26,48 +26,76 @@ import {
 } from '@/components/data-table'
 import type { TeamMember } from '@/services/teams'
 import { Button } from '@/components/ui/button'
-
-const columns: ColumnDef<TeamMember>[] = [
-  {
-    accessorKey: 'username',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='用户名' />
-    ),
-    cell: ({ row }) => <span>{row.original.username}</span>,
-  },
-  {
-    accessorKey: 'name',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='姓名' />
-    ),
-    cell: ({ row }) => <span>{row.original.name || '-'}</span>,
-  },
-  {
-    accessorKey: 'teamRoleCode',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='角色' />
-    ),
-    cell: ({ row }) => <span>{row.original.teamRoleName || row.original.teamRoleCode}</span>,
-  },
-]
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 type TeamMembersTableProps = {
   data: TeamMember[]
   onRemove: (member: TeamMember) => void
+  onRoleChange: (
+    member: TeamMember,
+    role: 'owner' | 'maintainer' | 'member',
+  ) => void
 }
 
-export function TeamMembersTable({ data, onRemove }: TeamMembersTableProps) {
+export function TeamMembersTable({ data, onRemove, onRoleChange }: TeamMembersTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
   const [globalFilter, setGlobalFilter] = useState('')
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
-    data,
-    columns: [
-      ...columns,
+  const columns = useMemo<ColumnDef<TeamMember>[]>(
+    () => [
+      {
+        accessorKey: 'username',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='用户名' />
+        ),
+        cell: ({ row }) => <span>{row.original.username}</span>,
+      },
+      {
+        accessorKey: 'name',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='姓名' />
+        ),
+        cell: ({ row }) => <span>{row.original.name || '-'}</span>,
+      },
+      {
+        accessorKey: 'teamRoleCode',
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='角色' />
+        ),
+        cell: ({ row }) => (
+          <Select
+            value={row.original.teamRoleCode || 'member'}
+            onValueChange={(value) =>
+              onRoleChange(
+                row.original,
+                value as 'owner' | 'maintainer' | 'member',
+              )
+            }
+          >
+            <SelectTrigger className='h-8 w-28 text-xs'>
+              <SelectValue
+                placeholder={
+                  row.original.teamRoleName || row.original.teamRoleCode || '成员'
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='owner'>拥有者</SelectItem>
+              <SelectItem value='maintainer'>维护者</SelectItem>
+              <SelectItem value='member'>成员</SelectItem>
+            </SelectContent>
+          </Select>
+        ),
+      },
       {
         id: 'actions',
         header: '操作',
@@ -89,6 +117,13 @@ export function TeamMembersTable({ data, onRemove }: TeamMembersTableProps) {
         },
       },
     ],
+    [onRemove, onRoleChange],
+  )
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const table = useReactTable({
+    data,
+    columns,
     state: {
       sorting,
       columnVisibility,

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
-import axios, { AxiosError } from 'axios'
+import axios, { AxiosError, type AxiosRequestHeaders } from 'axios'
 import {
   QueryCache,
   QueryClient,
@@ -23,9 +23,9 @@ axios.interceptors.request.use((config) => {
   const token = useAuthStore.getState().auth.accessToken
   if (token) {
     if (!config.headers) {
-      config.headers = {} as typeof config.headers
+      config.headers = {} as AxiosRequestHeaders
     }
-    ;(config.headers as any).Authorization = `Bearer ${token}`
+    ;(config.headers as AxiosRequestHeaders).Authorization = `Bearer ${token}`
   }
   return config
 })

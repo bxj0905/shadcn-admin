@@ -1,4 +1,4 @@
-import { type ColumnDef } from '@tanstack/react-table'
+import { type ColumnDef, type CellContext } from '@tanstack/react-table'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -9,6 +9,48 @@ import { type User } from '../data/schema'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { updateUserStatus } from '@/services/users'
 import { DataTableRowActions } from './data-table-row-actions'
+
+function StatusCell({ row }: CellContext<User, unknown>) {
+  const { id, status } = row.original
+  const badgeColor =
+    status === 'active'
+      ? 'bg-green-500 text-white border-transparent'
+      : status === 'inactive'
+        ? 'bg-red-500 text-white border-transparent'
+        : callTypes.get(status)
+
+  const queryClient = useQueryClient()
+  const mutation = useMutation({
+    mutationFn: (nextStatus: 'active' | 'inactive') => {
+      const numeric = nextStatus === 'active' ? 1 : 0
+      return updateUserStatus(id, numeric)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+  })
+
+  const handleToggle = () => {
+    const next = status === 'active' ? 'inactive' : 'active'
+    mutation.mutate(next)
+  }
+
+  return (
+    <button
+      type='button'
+      onClick={handleToggle}
+      className='inline-flex items-center w-[72px] justify-center'
+      disabled={mutation.status === 'pending'}
+    >
+      <Badge
+        variant='outline'
+        className={cn('capitalize w-full justify-center', badgeColor)}
+      >
+        {row.getValue('status')}
+      </Badge>
+    </button>
+  )
+}
 
 export const usersColumns: ColumnDef<User>[] = [
   {
@@ -88,45 +130,7 @@ export const usersColumns: ColumnDef<User>[] = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title='状态' />
     ),
-    cell: ({ row }) => {
-      const { id, status } = row.original
-      const badgeColor =
-        status === 'active'
-          ? 'bg-green-500 text-white border-transparent'
-          : status === 'inactive'
-            ? 'bg-red-500 text-white border-transparent'
-            : callTypes.get(status)
-      const queryClient = useQueryClient()
-      const mutation = useMutation({
-        mutationFn: (nextStatus: 'active' | 'inactive') => {
-          const numeric = nextStatus === 'active' ? 1 : 0
-          return updateUserStatus(id, numeric)
-        },
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: ['users'] })
-        },
-      })
-
-      const handleToggle = () => {
-        const next = status === 'active' ? 'inactive' : 'active'
-        mutation.mutate(next as 'active' | 'inactive')
-      }
-      return (
-        <button
-          type='button'
-          onClick={handleToggle}
-          className='inline-flex items-center w-[72px] justify-center'
-          disabled={mutation.isLoading}
-        >
-          <Badge
-            variant='outline'
-            className={cn('capitalize w-full justify-center', badgeColor)}
-          >
-            {row.getValue('status')}
-          </Badge>
-        </button>
-      )
-    },
+    cell: StatusCell,
     filterFn: (row, id, value) => {
       return value.includes(row.getValue(id))
     },

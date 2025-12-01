@@ -10,8 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { TeamMember } from '@/services/teams'
-import { addTeamMember, deleteTeamMember, fetchTeamMembers, updateTeamMember } from '@/services/teams'
+import {
+  addTeamMember,
+  deleteTeamMember,
+  fetchTeamMembers,
+  updateTeamMember,
+  type TeamMember,
+} from '@/services/teams'
 import { fetchUsers } from '@/services/users'
 import type { User } from '@/features/users/data/schema'
 import { useState } from 'react'
@@ -59,13 +64,16 @@ export function TeamMembersPage({ teamId }: { teamId: string }) {
     }
   }
 
-  const onRoleChange = async (member: TeamMember, role: 'owner' | 'maintainer' | 'member') => {
-    await updateTeamMember(teamId, member.id, { role })
+  const onRemove = async (member: TeamMember) => {
+    await deleteTeamMember(teamId, member.id)
     await queryClient.invalidateQueries({ queryKey: ['team-members', teamId] })
   }
 
-  const onRemove = async (member: TeamMember) => {
-    await deleteTeamMember(teamId, member.id)
+  const onRoleChange = async (
+    member: TeamMember,
+    role: 'owner' | 'maintainer' | 'member',
+  ) => {
+    await updateTeamMember(teamId, member.id, { role })
     await queryClient.invalidateQueries({ queryKey: ['team-members', teamId] })
   }
 
@@ -171,6 +179,7 @@ export function TeamMembersPage({ teamId }: { teamId: string }) {
           teamRoleCode: m.teamRoleCode || 'member',
         }))}
         onRemove={onRemove}
+        onRoleChange={onRoleChange}
       />
         </div>
       </Main>

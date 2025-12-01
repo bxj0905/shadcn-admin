@@ -50,6 +50,7 @@
   "sidebar.nav.chats": "Chats",
   "sidebar.nav.users": "Users",
   "sidebar.nav.teams": "Teams",
+  "sidebar.nav.datasets": "Datasets",
   "sidebar.nav.teamMembers": "Team Members",
   "sidebar.nav.clerk.group": "LDAP",
   "sidebar.nav.clerk.signIn": "Sign In",

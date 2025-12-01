@@ -51,6 +51,7 @@
   "sidebar.nav.users": "用户",
   "sidebar.nav.teams": "团队",
   "sidebar.nav.teamMembers": "团队成员",
+  "sidebar.nav.datasets": "数据集",
   "sidebar.nav.clerk.group": "LDAP",
   "sidebar.nav.clerk.signIn": "登录",
   "sidebar.nav.clerk.signUp": "注册",

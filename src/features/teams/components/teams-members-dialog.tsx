@@ -28,8 +28,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { Team } from '../data/schema'
-import type { TeamMember } from '@/services/teams'
-import { addTeamMember, deleteTeamMember, fetchTeamMembers, updateTeamMember } from '@/services/teams'
+import {
+  addTeamMember,
+  deleteTeamMember,
+  fetchTeamMembers,
+  updateTeamMember,
+  type TeamMember,
+} from '@/services/teams'
 import { fetchUsers } from '@/services/users'
 import type { User } from '@/features/users/data/schema'
 

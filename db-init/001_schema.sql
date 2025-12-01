@@ -247,7 +247,48 @@ CREATE INDEX IF NOT EXISTS idx_trp_role_id
 CREATE INDEX IF NOT EXISTS idx_trp_permission_id
   ON team_role_permissions(team_permission_id);
 
--- 5. 审计日志 & 系统设置
+-- 5. 团队数据集与数据集成员权限
+CREATE TABLE IF NOT EXISTS team_datasets (
+  id           BIGSERIAL PRIMARY KEY,
+  team_id      BIGINT NOT NULL,
+  name         VARCHAR(200) NOT NULL,
+  description  VARCHAR(500),
+  type         VARCHAR(20) NOT NULL,  -- duckdb | pgsql
+  storage_path VARCHAR(500) NOT NULL, -- duckdb: MinIO 路径; pgsql: DB 名
+  created_by   BIGINT NOT NULL,
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_team_datasets_team_id
+    FOREIGN KEY (team_id) REFERENCES teams(id)
+      ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_team_datasets_created_by
+    FOREIGN KEY (created_by) REFERENCES users(id)
+      ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_team_datasets_team_id
+  ON team_datasets(team_id);
+
+CREATE TABLE IF NOT EXISTS team_dataset_members (
+  id         BIGSERIAL PRIMARY KEY,
+  dataset_id BIGINT NOT NULL,
+  user_id    BIGINT NOT NULL,
+  permission VARCHAR(20) NOT NULL, -- viewer | editor
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uk_dataset_members UNIQUE (dataset_id, user_id),
+  CONSTRAINT fk_dataset_members_dataset_id
+    FOREIGN KEY (dataset_id) REFERENCES team_datasets(id)
+      ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_dataset_members_user_id
+    FOREIGN KEY (user_id) REFERENCES users(id)
+      ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_dataset_members_user_id
+  ON team_dataset_members(user_id);
+
+-- 6. 审计日志 & 系统设置
 CREATE TABLE IF NOT EXISTS audit_logs (
   id             BIGSERIAL PRIMARY KEY,
   user_id        BIGINT,

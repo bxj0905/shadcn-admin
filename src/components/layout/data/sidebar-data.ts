@@ -90,6 +90,12 @@ export const sidebarData: SidebarData = {
           icon: Users,
         },
         {
+          title: 'Datasets',
+          i18nKey: 'sidebar.nav.datasets',
+          url: '/datasets',
+          icon: Package,
+        },
+        {
           title: 'Team Members',
           i18nKey: 'sidebar.nav.teamMembers',
           url: '/team-members',

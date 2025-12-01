@@ -30,3 +30,8 @@ export async function updateUserStatus(id: string, status: 0 | 1) {
   const res = await axios.patch(`/api/users/${id}/status`, { status })
   return res.data
 }
+
+export async function deleteUser(id: string) {
+  const res = await axios.delete(`/api/users/${id}`)
+  return res.data
+}
