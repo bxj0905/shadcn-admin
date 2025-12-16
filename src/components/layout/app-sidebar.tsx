@@ -6,16 +6,18 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
+  useSidebar,
 } from '@/components/ui/sidebar'
-// import { AppTitle } from './app-title'
 import { sidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
 import { TeamSwitcher } from './team-switcher'
+import { SystemBranding } from '@/components/system-branding'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
   const { auth } = useAuthStore()
+  const { state } = useSidebar()
 
   const currentUser = auth.user
   const isAdmin = !!currentUser &&
@@ -40,11 +42,17 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible={collapsible} variant={variant}>
       <SidebarHeader>
-        <TeamSwitcher />
+        {state === 'collapsed' && (
+          <SystemBranding
+            orientation='column'
+            showName={false}
+            showTagline={false}
+            size='sm'
+            className='justify-center'
+          />
+        )}
 
-        {/* Replace <TeamSwitch /> with the following <AppTitle />
-         /* if you want to use the normal app title instead of TeamSwitch dropdown */}
-        {/* <AppTitle /> */}
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         {navGroups.map((props) => (

@@ -18,8 +18,7 @@ import {
 } from '@/components/ui/sidebar'
 import { useAuthStore } from '@/stores/auth-store'
 import { useQuery } from '@tanstack/react-query'
-import type { Team } from '@/services/teams'
-import { fetchTeams } from '@/services/teams'
+import { fetchTeams, type Team } from '@/services/teams'
 import { useTeamStore } from '@/stores/team-store'
 
 export function TeamSwitcher() {

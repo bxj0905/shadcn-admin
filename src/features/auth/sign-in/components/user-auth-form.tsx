@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
 import { IconFacebook, IconGithub } from '@/assets/brand-icons'
 import { useAuthStore } from '@/stores/auth-store'
 import { login, type AuthProvider } from '@/services/auth'
@@ -24,13 +26,17 @@ import { PasswordInput } from '@/components/password-input'
 const formSchema = z.object({
   email: z
     .string()
-    .min(1, 'Please enter your email or username')
-    .email('Please enter a valid email address')
-    .or(z.string().min(1, 'Please enter your email or username')),
+    .min(1, i18n.t('auth.form.validation.emailOrUsername.required'))
+    .email(i18n.t('auth.form.validation.email.invalid'))
+    .or(
+      z
+        .string()
+        .min(1, i18n.t('auth.form.validation.emailOrUsername.required')),
+    ),
   password: z
     .string()
-    .min(1, 'Please enter your password')
-    .min(7, 'Password must be at least 7 characters long'),
+    .min(1, i18n.t('auth.form.validation.password.required'))
+    .min(7, i18n.t('auth.form.validation.password.min')),
 })
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
@@ -45,6 +51,7 @@ export function UserAuthForm({
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const { auth } = useAuthStore()
+  const { t } = useTranslation()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -61,7 +68,7 @@ export function UserAuthForm({
       // provider 使用 auto，由后端自动判断是本地账号还是 LDAP 账号
       login('auto' as AuthProvider, data.email, data.password),
       {
-        loading: 'Signing in...',
+        loading: i18n.t('auth.toast.signIn.loading'),
         success: (res) => {
           const exp = Date.now() + res.expiresIn * 1000
 
@@ -71,15 +78,17 @@ export function UserAuthForm({
           })
           auth.setAccessToken(res.accessToken)
 
-          const targetPath = redirectTo || '/'
+          const targetPath = redirectTo || '/_authenticated/'
           navigate({ to: targetPath, replace: true })
 
-          return `Welcome back, ${res.user.email}!`
+          return i18n.t('auth.toast.signIn.success', {
+            email: res.user.email,
+          })
         },
         error: (err) => {
           // eslint-disable-next-line no-console
           console.error(err)
-          return 'Sign in failed'
+          return i18n.t('auth.toast.signIn.error')
         },
       }
     )
@@ -99,9 +108,12 @@ export function UserAuthForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t('auth.form.emailOrUsername')}</FormLabel>
               <FormControl>
-                <Input placeholder='name@example.com' {...field} />
+                <Input
+                  placeholder={t('auth.form.emailOrUsername.placeholder')}
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -112,7 +124,7 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem className='relative'>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t('auth.form.password')}</FormLabel>
               <FormControl>
                 <PasswordInput placeholder='********' {...field} />
               </FormControl>
@@ -121,14 +133,14 @@ export function UserAuthForm({
                 to='/forgot-password'
                 className='text-muted-foreground absolute end-0 -top-0.5 text-sm font-medium hover:opacity-75'
               >
-                Forgot password?
+                {t('auth.form.forgotPassword')}
               </Link>
             </FormItem>
           )}
         />
         <Button className='mt-2' disabled={isLoading}>
           {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
-          Sign in
+          {t('auth.signIn.submit')}
         </Button>
 
         <div className='relative my-2'>
@@ -137,7 +149,7 @@ export function UserAuthForm({
           </div>
           <div className='relative flex justify-center text-xs uppercase'>
             <span className='bg-background text-muted-foreground px-2'>
-              Or continue with
+              {t('auth.form.orContinueWith')}
             </span>
           </div>
         </div>

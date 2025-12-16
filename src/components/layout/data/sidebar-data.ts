@@ -78,6 +78,41 @@ export const sidebarData: SidebarData = {
           icon: MessagesSquare,
         },
         {
+          title: 'AI Chat',
+          url: '/chat',
+          icon: MessagesSquare,
+        },
+        {
+          title: 'Datasets',
+          i18nKey: 'sidebar.nav.datasets',
+          url: '/datasets',
+          icon: Package,
+        },
+        {
+          title: 'Data Processing',
+          url: '/data-processing',
+          icon: ListTodo,
+        },
+        {
+          title: 'Team Members',
+          i18nKey: 'sidebar.nav.teamMembers',
+          url: '/team-members',
+          icon: Users,
+        },
+        // LDAP 相关演示页面入口已去掉，实际同步入口在 /users 页面的“同步 LDAP 用户”按钮
+      ],
+    },
+    {
+      title: 'System Settings',
+      i18nKey: 'sidebar.group.systemSettings',
+      items: [
+        {
+          title: 'System Settings',
+          i18nKey: 'sidebar.nav.systemSettings',
+          url: '/system-settings',
+          icon: Settings,
+        },
+        {
           title: 'Users',
           i18nKey: 'sidebar.nav.users',
           url: '/users',
@@ -89,19 +124,6 @@ export const sidebarData: SidebarData = {
           url: '/teams',
           icon: Users,
         },
-        {
-          title: 'Datasets',
-          i18nKey: 'sidebar.nav.datasets',
-          url: '/datasets',
-          icon: Package,
-        },
-        {
-          title: 'Team Members',
-          i18nKey: 'sidebar.nav.teamMembers',
-          url: '/team-members',
-          icon: Users,
-        },
-        // LDAP 相关演示页面入口已去掉，实际同步入口在 /users 页面的“同步 LDAP 用户”按钮
       ],
     },
     {

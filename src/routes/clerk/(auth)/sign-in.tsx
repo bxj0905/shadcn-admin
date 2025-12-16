@@ -19,11 +19,11 @@ function ClerkLocalSignIn() {
   return (
     <Card className='gap-4 w-full max-w-md'>
       <CardHeader>
-        <CardTitle className='text-lg tracking-tight'>Sign in</CardTitle>
+        <CardTitle className='text-lg tracking-tight'>登录</CardTitle>
         <CardDescription>
-          Enter your email and password below to
+          请输入邮箱和密码以
           <br />
-          log into your account
+          登录到你的账户
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -31,19 +31,19 @@ function ClerkLocalSignIn() {
       </CardContent>
       <CardFooter>
         <p className='text-muted-foreground px-8 text-center text-sm'>
-          By clicking sign in, you agree to our{' '}
+          点击“登录”即表示你同意我们的{' '}
           <a
             href='/terms'
             className='hover:text-primary underline underline-offset-4'
           >
-            Terms of Service
+            服务条款
           </a>{' '}
-          and{' '}
+          及{' '}
           <a
             href='/privacy'
             className='hover:text-primary underline underline-offset-4'
           >
-            Privacy Policy
+            隐私政策
           </a>
           .
         </p>

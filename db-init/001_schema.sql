@@ -316,15 +316,35 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
   ON audit_logs(created_at);
 
 CREATE TABLE IF NOT EXISTS system_settings (
-  id            BIGSERIAL PRIMARY KEY,
-  site_title    VARCHAR(200) NOT NULL,
-  site_subtitle VARCHAR(255),
-  logo_url      VARCHAR(512),
-  logo_format   VARCHAR(10), -- png, svg
-  extra         JSONB,
-  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+  id                 BIGSERIAL PRIMARY KEY,
+  site_title         VARCHAR(200) NOT NULL,
+  site_subtitle      VARCHAR(255),
+  logo_url           VARCHAR(512),
+  logo_format        VARCHAR(10), -- png, svg
+  browser_icon_url   VARCHAR(512),
+  browser_icon_format VARCHAR(10), -- png, svg, ico
+  extra              JSONB,
+  created_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS system_licenses (
+  id           BIGSERIAL PRIMARY KEY,
+  status       VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+  license_name VARCHAR(200),
+  issuer       VARCHAR(200),
+  valid_from   TIMESTAMP,
+  valid_to     TIMESTAMP,
+  notes        TEXT,
+  file_url     VARCHAR(512),
+  file_format  VARCHAR(50),
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO system_licenses (id, status, created_at, updated_at)
+VALUES (1, 'DRAFT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
 
 -- 6. 初始化数据（id 使用自然主键冲突时用 ON CONFLICT）
 INSERT INTO auth_providers (code, name, type, enabled)

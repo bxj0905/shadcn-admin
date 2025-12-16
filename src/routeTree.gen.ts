@@ -13,7 +13,11 @@ import { Route as ClerkRouteRouteImport } from './routes/clerk/route'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedTeamMembersRouteImport } from './routes/_authenticated/team-members'
+import { Route as AuthenticatedDrizzleStudioRouteImport } from './routes/_authenticated/drizzle-studio'
 import { Route as AuthenticatedDatasetsRouteImport } from './routes/_authenticated/datasets'
+import { Route as AuthenticatedDataProcessingRouteImport } from './routes/_authenticated/data-processing'
+import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
+import { Route as AuthenticatedAiChatRouteImport } from './routes/_authenticated/ai-chat'
 import { Route as errors503RouteImport } from './routes/(errors)/503'
 import { Route as errors500RouteImport } from './routes/(errors)/500'
 import { Route as errors404RouteImport } from './routes/(errors)/404'
@@ -26,23 +30,28 @@ import { Route as authOtpRouteImport } from './routes/(auth)/otp'
 import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-password'
 import { Route as ClerkAuthenticatedRouteRouteImport } from './routes/clerk/_authenticated/route'
 import { Route as ClerkauthRouteRouteImport } from './routes/clerk/(auth)/route'
+import { Route as AuthenticatedSystemSettingsRouteRouteImport } from './routes/_authenticated/system-settings/route'
 import { Route as AuthenticatedSettingsRouteRouteImport } from './routes/_authenticated/settings/route'
 import { Route as AuthenticatedUsersIndexRouteImport } from './routes/_authenticated/users/index'
 import { Route as AuthenticatedTeamsIndexRouteImport } from './routes/_authenticated/teams/index'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks/index'
+import { Route as AuthenticatedSystemSettingsIndexRouteImport } from './routes/_authenticated/system-settings/index'
 import { Route as AuthenticatedSettingsIndexRouteImport } from './routes/_authenticated/settings/index'
 import { Route as AuthenticatedHelpCenterIndexRouteImport } from './routes/_authenticated/help-center/index'
+import { Route as AuthenticatedDifyAppsIndexRouteImport } from './routes/_authenticated/dify-apps/index'
 import { Route as AuthenticatedChatsIndexRouteImport } from './routes/_authenticated/chats/index'
 import { Route as AuthenticatedAppsIndexRouteImport } from './routes/_authenticated/apps/index'
 import { Route as ClerkAuthenticatedUserManagementRouteImport } from './routes/clerk/_authenticated/user-management'
 import { Route as ClerkauthSignUpRouteImport } from './routes/clerk/(auth)/sign-up'
 import { Route as ClerkauthSignInRouteImport } from './routes/clerk/(auth)/sign-in'
+import { Route as AuthenticatedSystemSettingsLicenseRouteImport } from './routes/_authenticated/system-settings/license'
 import { Route as AuthenticatedSettingsNotificationsRouteImport } from './routes/_authenticated/settings/notifications'
 import { Route as AuthenticatedSettingsDisplayRouteImport } from './routes/_authenticated/settings/display'
 import { Route as AuthenticatedSettingsAppearanceRouteImport } from './routes/_authenticated/settings/appearance'
 import { Route as AuthenticatedSettingsAccountRouteImport } from './routes/_authenticated/settings/account'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
 import { Route as AuthenticatedTeamsTeamIdMembersRouteImport } from './routes/_authenticated/teams/$teamId/members'
+import { Route as AuthenticatedDatasetsDatasetIdPgRouteImport } from './routes/_authenticated/datasets/$datasetId/pg'
 
 const ClerkRouteRoute = ClerkRouteRouteImport.update({
   id: '/clerk',
@@ -64,9 +73,31 @@ const AuthenticatedTeamMembersRoute =
     path: '/team-members',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDrizzleStudioRoute =
+  AuthenticatedDrizzleStudioRouteImport.update({
+    id: '/drizzle-studio',
+    path: '/drizzle-studio',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedDatasetsRoute = AuthenticatedDatasetsRouteImport.update({
   id: '/datasets',
   path: '/datasets',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedDataProcessingRoute =
+  AuthenticatedDataProcessingRouteImport.update({
+    id: '/data-processing',
+    path: '/data-processing',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedChatRoute = AuthenticatedChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAiChatRoute = AuthenticatedAiChatRouteImport.update({
+  id: '/ai-chat',
+  path: '/ai-chat',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const errors503Route = errors503RouteImport.update({
@@ -127,6 +158,12 @@ const ClerkauthRouteRoute = ClerkauthRouteRouteImport.update({
   id: '/(auth)',
   getParentRoute: () => ClerkRouteRoute,
 } as any)
+const AuthenticatedSystemSettingsRouteRoute =
+  AuthenticatedSystemSettingsRouteRouteImport.update({
+    id: '/system-settings',
+    path: '/system-settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedSettingsRouteRoute =
   AuthenticatedSettingsRouteRouteImport.update({
     id: '/settings',
@@ -148,6 +185,12 @@ const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
   path: '/tasks/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSystemSettingsIndexRoute =
+  AuthenticatedSystemSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedSystemSettingsRouteRoute,
+  } as any)
 const AuthenticatedSettingsIndexRoute =
   AuthenticatedSettingsIndexRouteImport.update({
     id: '/',
@@ -158,6 +201,12 @@ const AuthenticatedHelpCenterIndexRoute =
   AuthenticatedHelpCenterIndexRouteImport.update({
     id: '/help-center/',
     path: '/help-center/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDifyAppsIndexRoute =
+  AuthenticatedDifyAppsIndexRouteImport.update({
+    id: '/dify-apps/',
+    path: '/dify-apps/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedChatsIndexRoute = AuthenticatedChatsIndexRouteImport.update({
@@ -186,6 +235,12 @@ const ClerkauthSignInRoute = ClerkauthSignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => ClerkauthRouteRoute,
 } as any)
+const AuthenticatedSystemSettingsLicenseRoute =
+  AuthenticatedSystemSettingsLicenseRouteImport.update({
+    id: '/license',
+    path: '/license',
+    getParentRoute: () => AuthenticatedSystemSettingsRouteRoute,
+  } as any)
 const AuthenticatedSettingsNotificationsRoute =
   AuthenticatedSettingsNotificationsRouteImport.update({
     id: '/notifications',
@@ -222,10 +277,17 @@ const AuthenticatedTeamsTeamIdMembersRoute =
     path: '/teams/$teamId/members',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedDatasetsDatasetIdPgRoute =
+  AuthenticatedDatasetsDatasetIdPgRouteImport.update({
+    id: '/$datasetId/pg',
+    path: '/$datasetId/pg',
+    getParentRoute: () => AuthenticatedDatasetsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/clerk': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
   '/forgot-password': typeof authForgotPasswordRoute
   '/otp': typeof authOtpRoute
   '/sign-in': typeof authSignInRoute
@@ -236,7 +298,11 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
-  '/datasets': typeof AuthenticatedDatasetsRoute
+  '/ai-chat': typeof AuthenticatedAiChatRoute
+  '/chat': typeof AuthenticatedChatRoute
+  '/data-processing': typeof AuthenticatedDataProcessingRoute
+  '/datasets': typeof AuthenticatedDatasetsRouteWithChildren
+  '/drizzle-studio': typeof AuthenticatedDrizzleStudioRoute
   '/team-members': typeof AuthenticatedTeamMembersRoute
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -244,16 +310,20 @@ export interface FileRoutesByFullPath {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/system-settings/license': typeof AuthenticatedSystemSettingsLicenseRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
+  '/dify-apps': typeof AuthenticatedDifyAppsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/system-settings/': typeof AuthenticatedSystemSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/teams': typeof AuthenticatedTeamsIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/datasets/$datasetId/pg': typeof AuthenticatedDatasetsDatasetIdPgRoute
   '/teams/$teamId/members': typeof AuthenticatedTeamsTeamIdMembersRoute
 }
 export interface FileRoutesByTo {
@@ -268,7 +338,11 @@ export interface FileRoutesByTo {
   '/404': typeof errors404Route
   '/500': typeof errors500Route
   '/503': typeof errors503Route
-  '/datasets': typeof AuthenticatedDatasetsRoute
+  '/ai-chat': typeof AuthenticatedAiChatRoute
+  '/chat': typeof AuthenticatedChatRoute
+  '/data-processing': typeof AuthenticatedDataProcessingRoute
+  '/datasets': typeof AuthenticatedDatasetsRouteWithChildren
+  '/drizzle-studio': typeof AuthenticatedDrizzleStudioRoute
   '/team-members': typeof AuthenticatedTeamMembersRoute
   '/': typeof AuthenticatedIndexRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -276,16 +350,20 @@ export interface FileRoutesByTo {
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/system-settings/license': typeof AuthenticatedSystemSettingsLicenseRoute
   '/clerk/sign-in': typeof ClerkauthSignInRoute
   '/clerk/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/apps': typeof AuthenticatedAppsIndexRoute
   '/chats': typeof AuthenticatedChatsIndexRoute
+  '/dify-apps': typeof AuthenticatedDifyAppsIndexRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexRoute
   '/settings': typeof AuthenticatedSettingsIndexRoute
+  '/system-settings': typeof AuthenticatedSystemSettingsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
   '/teams': typeof AuthenticatedTeamsIndexRoute
   '/users': typeof AuthenticatedUsersIndexRoute
+  '/datasets/$datasetId/pg': typeof AuthenticatedDatasetsDatasetIdPgRoute
   '/teams/$teamId/members': typeof AuthenticatedTeamsTeamIdMembersRoute
 }
 export interface FileRoutesById {
@@ -293,6 +371,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/clerk': typeof ClerkRouteRouteWithChildren
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteRouteWithChildren
+  '/_authenticated/system-settings': typeof AuthenticatedSystemSettingsRouteRouteWithChildren
   '/clerk/(auth)': typeof ClerkauthRouteRouteWithChildren
   '/clerk/_authenticated': typeof ClerkAuthenticatedRouteRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordRoute
@@ -305,7 +384,11 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
   '/(errors)/503': typeof errors503Route
-  '/_authenticated/datasets': typeof AuthenticatedDatasetsRoute
+  '/_authenticated/ai-chat': typeof AuthenticatedAiChatRoute
+  '/_authenticated/chat': typeof AuthenticatedChatRoute
+  '/_authenticated/data-processing': typeof AuthenticatedDataProcessingRoute
+  '/_authenticated/datasets': typeof AuthenticatedDatasetsRouteWithChildren
+  '/_authenticated/drizzle-studio': typeof AuthenticatedDrizzleStudioRoute
   '/_authenticated/team-members': typeof AuthenticatedTeamMembersRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
@@ -313,16 +396,20 @@ export interface FileRoutesById {
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceRoute
   '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayRoute
   '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsRoute
+  '/_authenticated/system-settings/license': typeof AuthenticatedSystemSettingsLicenseRoute
   '/clerk/(auth)/sign-in': typeof ClerkauthSignInRoute
   '/clerk/(auth)/sign-up': typeof ClerkauthSignUpRoute
   '/clerk/_authenticated/user-management': typeof ClerkAuthenticatedUserManagementRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexRoute
+  '/_authenticated/dify-apps/': typeof AuthenticatedDifyAppsIndexRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexRoute
+  '/_authenticated/system-settings/': typeof AuthenticatedSystemSettingsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
   '/_authenticated/teams/': typeof AuthenticatedTeamsIndexRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexRoute
+  '/_authenticated/datasets/$datasetId/pg': typeof AuthenticatedDatasetsDatasetIdPgRoute
   '/_authenticated/teams/$teamId/members': typeof AuthenticatedTeamsTeamIdMembersRoute
 }
 export interface FileRouteTypes {
@@ -330,6 +417,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/clerk'
     | '/settings'
+    | '/system-settings'
     | '/forgot-password'
     | '/otp'
     | '/sign-in'
@@ -340,7 +428,11 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/ai-chat'
+    | '/chat'
+    | '/data-processing'
     | '/datasets'
+    | '/drizzle-studio'
     | '/team-members'
     | '/'
     | '/errors/$error'
@@ -348,16 +440,20 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/system-settings/license'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
     | '/apps'
     | '/chats'
+    | '/dify-apps'
     | '/help-center'
     | '/settings/'
+    | '/system-settings/'
     | '/tasks'
     | '/teams'
     | '/users'
+    | '/datasets/$datasetId/pg'
     | '/teams/$teamId/members'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -372,7 +468,11 @@ export interface FileRouteTypes {
     | '/404'
     | '/500'
     | '/503'
+    | '/ai-chat'
+    | '/chat'
+    | '/data-processing'
     | '/datasets'
+    | '/drizzle-studio'
     | '/team-members'
     | '/'
     | '/errors/$error'
@@ -380,22 +480,27 @@ export interface FileRouteTypes {
     | '/settings/appearance'
     | '/settings/display'
     | '/settings/notifications'
+    | '/system-settings/license'
     | '/clerk/sign-in'
     | '/clerk/sign-up'
     | '/clerk/user-management'
     | '/apps'
     | '/chats'
+    | '/dify-apps'
     | '/help-center'
     | '/settings'
+    | '/system-settings'
     | '/tasks'
     | '/teams'
     | '/users'
+    | '/datasets/$datasetId/pg'
     | '/teams/$teamId/members'
   id:
     | '__root__'
     | '/_authenticated'
     | '/clerk'
     | '/_authenticated/settings'
+    | '/_authenticated/system-settings'
     | '/clerk/(auth)'
     | '/clerk/_authenticated'
     | '/(auth)/forgot-password'
@@ -408,7 +513,11 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/ai-chat'
+    | '/_authenticated/chat'
+    | '/_authenticated/data-processing'
     | '/_authenticated/datasets'
+    | '/_authenticated/drizzle-studio'
     | '/_authenticated/team-members'
     | '/_authenticated/'
     | '/_authenticated/errors/$error'
@@ -416,16 +525,20 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/appearance'
     | '/_authenticated/settings/display'
     | '/_authenticated/settings/notifications'
+    | '/_authenticated/system-settings/license'
     | '/clerk/(auth)/sign-in'
     | '/clerk/(auth)/sign-up'
     | '/clerk/_authenticated/user-management'
     | '/_authenticated/apps/'
     | '/_authenticated/chats/'
+    | '/_authenticated/dify-apps/'
     | '/_authenticated/help-center/'
     | '/_authenticated/settings/'
+    | '/_authenticated/system-settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/teams/'
     | '/_authenticated/users/'
+    | '/_authenticated/datasets/$datasetId/pg'
     | '/_authenticated/teams/$teamId/members'
   fileRoutesById: FileRoutesById
 }
@@ -474,11 +587,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeamMembersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/drizzle-studio': {
+      id: '/_authenticated/drizzle-studio'
+      path: '/drizzle-studio'
+      fullPath: '/drizzle-studio'
+      preLoaderRoute: typeof AuthenticatedDrizzleStudioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/datasets': {
       id: '/_authenticated/datasets'
       path: '/datasets'
       fullPath: '/datasets'
       preLoaderRoute: typeof AuthenticatedDatasetsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/data-processing': {
+      id: '/_authenticated/data-processing'
+      path: '/data-processing'
+      fullPath: '/data-processing'
+      preLoaderRoute: typeof AuthenticatedDataProcessingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/chat': {
+      id: '/_authenticated/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof AuthenticatedChatRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/ai-chat': {
+      id: '/_authenticated/ai-chat'
+      path: '/ai-chat'
+      fullPath: '/ai-chat'
+      preLoaderRoute: typeof AuthenticatedAiChatRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/(errors)/503': {
@@ -565,6 +706,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClerkauthRouteRouteImport
       parentRoute: typeof ClerkRouteRoute
     }
+    '/_authenticated/system-settings': {
+      id: '/_authenticated/system-settings'
+      path: '/system-settings'
+      fullPath: '/system-settings'
+      preLoaderRoute: typeof AuthenticatedSystemSettingsRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
       path: '/settings'
@@ -593,6 +741,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/system-settings/': {
+      id: '/_authenticated/system-settings/'
+      path: '/'
+      fullPath: '/system-settings/'
+      preLoaderRoute: typeof AuthenticatedSystemSettingsIndexRouteImport
+      parentRoute: typeof AuthenticatedSystemSettingsRouteRoute
+    }
     '/_authenticated/settings/': {
       id: '/_authenticated/settings/'
       path: '/'
@@ -605,6 +760,13 @@ declare module '@tanstack/react-router' {
       path: '/help-center'
       fullPath: '/help-center'
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/dify-apps/': {
+      id: '/_authenticated/dify-apps/'
+      path: '/dify-apps'
+      fullPath: '/dify-apps'
+      preLoaderRoute: typeof AuthenticatedDifyAppsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/chats/': {
@@ -641,6 +803,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/clerk/sign-in'
       preLoaderRoute: typeof ClerkauthSignInRouteImport
       parentRoute: typeof ClerkauthRouteRoute
+    }
+    '/_authenticated/system-settings/license': {
+      id: '/_authenticated/system-settings/license'
+      path: '/license'
+      fullPath: '/system-settings/license'
+      preLoaderRoute: typeof AuthenticatedSystemSettingsLicenseRouteImport
+      parentRoute: typeof AuthenticatedSystemSettingsRouteRoute
     }
     '/_authenticated/settings/notifications': {
       id: '/_authenticated/settings/notifications'
@@ -684,6 +853,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTeamsTeamIdMembersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/datasets/$datasetId/pg': {
+      id: '/_authenticated/datasets/$datasetId/pg'
+      path: '/$datasetId/pg'
+      fullPath: '/datasets/$datasetId/pg'
+      preLoaderRoute: typeof AuthenticatedDatasetsDatasetIdPgRouteImport
+      parentRoute: typeof AuthenticatedDatasetsRoute
+    }
   }
 }
 
@@ -710,14 +886,51 @@ const AuthenticatedSettingsRouteRouteWithChildren =
     AuthenticatedSettingsRouteRouteChildren,
   )
 
+interface AuthenticatedSystemSettingsRouteRouteChildren {
+  AuthenticatedSystemSettingsLicenseRoute: typeof AuthenticatedSystemSettingsLicenseRoute
+  AuthenticatedSystemSettingsIndexRoute: typeof AuthenticatedSystemSettingsIndexRoute
+}
+
+const AuthenticatedSystemSettingsRouteRouteChildren: AuthenticatedSystemSettingsRouteRouteChildren =
+  {
+    AuthenticatedSystemSettingsLicenseRoute:
+      AuthenticatedSystemSettingsLicenseRoute,
+    AuthenticatedSystemSettingsIndexRoute:
+      AuthenticatedSystemSettingsIndexRoute,
+  }
+
+const AuthenticatedSystemSettingsRouteRouteWithChildren =
+  AuthenticatedSystemSettingsRouteRoute._addFileChildren(
+    AuthenticatedSystemSettingsRouteRouteChildren,
+  )
+
+interface AuthenticatedDatasetsRouteChildren {
+  AuthenticatedDatasetsDatasetIdPgRoute: typeof AuthenticatedDatasetsDatasetIdPgRoute
+}
+
+const AuthenticatedDatasetsRouteChildren: AuthenticatedDatasetsRouteChildren = {
+  AuthenticatedDatasetsDatasetIdPgRoute: AuthenticatedDatasetsDatasetIdPgRoute,
+}
+
+const AuthenticatedDatasetsRouteWithChildren =
+  AuthenticatedDatasetsRoute._addFileChildren(
+    AuthenticatedDatasetsRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteRoute: typeof AuthenticatedSettingsRouteRouteWithChildren
-  AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRoute
+  AuthenticatedSystemSettingsRouteRoute: typeof AuthenticatedSystemSettingsRouteRouteWithChildren
+  AuthenticatedAiChatRoute: typeof AuthenticatedAiChatRoute
+  AuthenticatedChatRoute: typeof AuthenticatedChatRoute
+  AuthenticatedDataProcessingRoute: typeof AuthenticatedDataProcessingRoute
+  AuthenticatedDatasetsRoute: typeof AuthenticatedDatasetsRouteWithChildren
+  AuthenticatedDrizzleStudioRoute: typeof AuthenticatedDrizzleStudioRoute
   AuthenticatedTeamMembersRoute: typeof AuthenticatedTeamMembersRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedErrorsErrorRoute: typeof AuthenticatedErrorsErrorRoute
   AuthenticatedAppsIndexRoute: typeof AuthenticatedAppsIndexRoute
   AuthenticatedChatsIndexRoute: typeof AuthenticatedChatsIndexRoute
+  AuthenticatedDifyAppsIndexRoute: typeof AuthenticatedDifyAppsIndexRoute
   AuthenticatedHelpCenterIndexRoute: typeof AuthenticatedHelpCenterIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
   AuthenticatedTeamsIndexRoute: typeof AuthenticatedTeamsIndexRoute
@@ -727,12 +940,19 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRouteRoute: AuthenticatedSettingsRouteRouteWithChildren,
-  AuthenticatedDatasetsRoute: AuthenticatedDatasetsRoute,
+  AuthenticatedSystemSettingsRouteRoute:
+    AuthenticatedSystemSettingsRouteRouteWithChildren,
+  AuthenticatedAiChatRoute: AuthenticatedAiChatRoute,
+  AuthenticatedChatRoute: AuthenticatedChatRoute,
+  AuthenticatedDataProcessingRoute: AuthenticatedDataProcessingRoute,
+  AuthenticatedDatasetsRoute: AuthenticatedDatasetsRouteWithChildren,
+  AuthenticatedDrizzleStudioRoute: AuthenticatedDrizzleStudioRoute,
   AuthenticatedTeamMembersRoute: AuthenticatedTeamMembersRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedErrorsErrorRoute: AuthenticatedErrorsErrorRoute,
   AuthenticatedAppsIndexRoute: AuthenticatedAppsIndexRoute,
   AuthenticatedChatsIndexRoute: AuthenticatedChatsIndexRoute,
+  AuthenticatedDifyAppsIndexRoute: AuthenticatedDifyAppsIndexRoute,
   AuthenticatedHelpCenterIndexRoute: AuthenticatedHelpCenterIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
   AuthenticatedTeamsIndexRoute: AuthenticatedTeamsIndexRoute,

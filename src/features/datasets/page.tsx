@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import { Search } from '@/components/search'
@@ -29,6 +30,7 @@ export function DatasetsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [membersDataset, setMembersDataset] = useState<Dataset | null>(null)
   const [importDataset, setImportDataset] = useState<Dataset | null>(null)
+  const navigate = useNavigate()
 
   const teamId = currentTeam?.id
 
@@ -171,6 +173,20 @@ export function DatasetsPage() {
                   <p>存储：{dataset.storagePath}</p>
                   <p>创建时间：{new Date(dataset.createdAt).toLocaleString()}</p>
                   <div className='flex justify-end gap-3 pt-2'>
+                    {dataset.type === 'pgsql' && (
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={() =>
+                          navigate({
+                            to: '/datasets/$datasetId/pg',
+                            params: { datasetId: dataset.id },
+                          })
+                        }
+                      >
+                        查看数据
+                      </Button>
+                    )}
                     <Button
                       variant='outline'
                       size='sm'
@@ -181,10 +197,15 @@ export function DatasetsPage() {
                     </Button>
                     <Button
                       variant='outline'
+                      className={
+                        dataset.lastImportStatus === 'success'
+                          ? 'border-emerald-500 text-emerald-600 bg-emerald-50 dark:border-emerald-500/60 dark:bg-emerald-900/30'
+                          : undefined
+                      }
                       size='sm'
                       onClick={() => setImportDataset(dataset)}
                     >
-                      导入数据
+                      {dataset.lastImportStatus === 'success' ? '已导入数据' : '导入数据'}
                     </Button>
                   </div>
                 </CardContent>

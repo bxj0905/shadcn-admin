@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -8,10 +9,16 @@ import {
   fetchDatasetImportRun,
   fetchDatasetImportTasks,
   fetchDatasetTaskLog,
+  fetchDatasetImportRuns,
+  createDatasetImportRun,
+  updateDatasetImportRun,
   triggerDatasetImport,
   uploadDatasetImportFiles,
+  fetchDatasetMasterValidation,
+  type MasterValidationRow,
   type Dataset,
   type DatasetImportTask,
+  type DatasetImportRun,
 } from '@/services/datasets'
 
 type DatasetsImportDialogProps = {
@@ -21,6 +28,7 @@ type DatasetsImportDialogProps = {
 }
 
 export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsImportDialogProps) {
+  const queryClient = useQueryClient()
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [airflowDagId, setAirflowDagId] = useState('wu_jing_pu_etl')
   const [config, setConfig] = useState('')
@@ -31,7 +39,9 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
   >('idle')
   const [uploadTotal, setUploadTotal] = useState<number>(0)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [importRun, setImportRun] = useState<DatasetImportRun | null>(null)
   const [runInfo, setRunInfo] = useState<{
     dagId: string
     runId: string
@@ -43,6 +53,20 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
   const [logDialogTaskId, setLogDialogTaskId] = useState<string | null>(null)
   const [logDialogContent, setLogDialogContent] = useState<string>('')
   const [logDialogLoading, setLogDialogLoading] = useState(false)
+  const [validationDialogOpen, setValidationDialogOpen] = useState(false)
+
+  const {
+    data: masterValidation,
+    isLoading: masterValidationLoading,
+    isError: masterValidationError,
+  } = useQuery<{ teamId: string; datasetId: string; key?: string; rows: MasterValidationRow[] }>(
+    {
+      queryKey: ['dataset-master-validation', dataset.id],
+      queryFn: () => fetchDatasetMasterValidation(dataset.id),
+      enabled: validationDialogOpen,
+      staleTime: 60_000,
+    },
+  )
 
   const TASK_LABELS: Record<string, string> = {
     get_runtime_config: '读取运行配置',
@@ -65,9 +89,69 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
     if (!value) {
       // 重置为第一步，避免下次打开直接停在配置页
       setStep(1)
+      setRunInfo(null)
+      setTasks([])
+      setDirectory('')
+      setRawPrefix(null)
+      setUploadStatus('idle')
+      setUploadTotal(0)
+      setUploadError(null)
+      setImportRun(null)
+      setUploadedFiles([])
     }
     onOpenChange(value)
   }
+
+  // 打开对话框时加载最近一次导入记录；如果是成功态，则直接跳到第三步用于查看日志
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const runs = await fetchDatasetImportRuns(dataset.id, 1)
+        if (cancelled) return
+        const latest = runs[0]
+        if (latest) {
+          setImportRun(latest)
+          if (latest.airflowDagId) {
+            setAirflowDagId(latest.airflowDagId)
+          }
+
+          const latestState = (latest.status || '').toLowerCase()
+
+          // 如果最近一次导入已成功，且记录了 Airflow 运行信息，则直接展示第 3 步，方便查看当时日志
+          if (
+            latestState === 'success' &&
+            latest.airflowDagId &&
+            latest.airflowRunId
+          ) {
+            setStep(3)
+            setRunInfo({
+              dagId: latest.airflowDagId,
+              runId: latest.airflowRunId,
+              state: latest.status || 'success',
+            })
+          } else if (latestState === 'uploaded') {
+            // 最近一次导入停留在第二步（已完成上传但尚未触发处理），恢复第二步的状态
+            setStep(2)
+            setDirectory(latest.directory || '')
+            setRawPrefix(latest.rawPrefix || null)
+            setUploadStatus('success')
+          }
+        } else {
+          setImportRun(null)
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('fetchDatasetImportRuns error', err)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, dataset.id])
 
   const handleStartProcessing = async () => {
     if (submitting || !airflowDagId) return
@@ -91,6 +175,31 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
         runId: data.runId,
         state: data.state || 'queued',
       })
+      // 记录或更新导入运行记录
+      try {
+        if (!importRun) {
+          const created = await createDatasetImportRun(dataset.id, {
+            airflowDagId,
+            airflowRunId: data.runId,
+            directory: directory || null,
+            rawPrefix: rawPrefix || null,
+            status: data.state || 'queued',
+          })
+          setImportRun(created)
+        } else {
+          const updated = await updateDatasetImportRun(dataset.id, importRun.id, {
+            airflowDagId,
+            airflowRunId: data.runId,
+            directory: directory || null,
+            rawPrefix: rawPrefix || null,
+            status: data.state || 'queued',
+          })
+          setImportRun(updated)
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('updateDatasetImportRun on trigger error', err)
+      }
       setStep(3)
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -117,7 +226,31 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
         ])
         setRunInfo((prev) => (prev ? { ...prev, state: run.state } : prev))
         setTasks(taskList)
-        if (run.state === 'success' || run.state === 'failed') return
+        if (run.state === 'success' || run.state === 'failed') {
+          // 导入完成时，同步更新导入记录状态，并刷新数据集列表 lastImportStatus
+          try {
+            if (importRun) {
+              const updated = await updateDatasetImportRun(dataset.id, importRun.id, {
+                airflowDagId: run.dagId,
+                airflowRunId: run.runId,
+                status: run.state,
+              })
+              setImportRun(updated)
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('updateDatasetImportRun on finish error', err)
+          }
+
+          try {
+            await queryClient.invalidateQueries({ queryKey: ['team-datasets', dataset.teamId] })
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error('invalidate team-datasets query error', err)
+          }
+
+          return
+        }
         timer = window.setTimeout(poll, 5000)
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -183,7 +316,7 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className='w-[90vw] max-w-[1400px] min-h-[70vh] max-h-[90vh]'>
+      <DialogContent className='w-[90vw] max-w-[1400px] min-h-[60vh] max-h-[80vh] overflow-hidden'>
         <div className='flex h-full flex-col gap-8'>
           {/* 顶部：标题 + Stepper，始终占满整个 Dialog 宽度 */}
           <div className='pt-1 px-8'>
@@ -217,7 +350,7 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                           : 'bg-muted text-muted-foreground'
                     }`}
                   >
-                    {step > 1 ? '已完成' : step === 1 ? '进行中' : '待处理'}
+                    {step > 1 ? '已完成' : step === 1 ? '进行中' : '等待中'}
                   </span>
                 </div>
               </div>
@@ -239,17 +372,23 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                 <div className='flex flex-col gap-1'>
                   <span className='text-[11px] font-medium tracking-wide text-muted-foreground'>STEP 2</span>
                   <span className='text-sm font-medium'>选择数据源目录</span>
-                  <span
-                    className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                      step > 2
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
-                        : step === 2
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {step > 2 ? '已完成' : step === 2 ? '进行中' : '待处理'}
-                  </span>
+                  {(() => {
+                    const completed = step > 2 || (step === 2 && uploadStatus === 'success')
+                    const active = step === 2 && uploadStatus !== 'success'
+                    return (
+                      <span
+                        className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                          completed
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'
+                            : active
+                              ? 'bg-primary/10 text-primary'
+                              : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {completed ? '已完成' : active ? '进行中' : '等待中'}
+                      </span>
+                    )
+                  })()}
                 </div>
               </div>
 
@@ -270,7 +409,7 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                 </div>
                 <div className='flex flex-col gap-1'>
                   <span className='text-[11px] font-medium tracking-wide text-muted-foreground'>STEP 3</span>
-                  <span className='text-sm font-medium'>数据处理确认</span>
+                  <span className='text-sm font-medium'>数据处理</span>
                   <span
                     className={`inline-flex w-fit rounded-full px-2 py-0.5 text-[11px] font-medium ${
                       runInfo?.state === 'success'
@@ -288,7 +427,7 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                         ? '失败'
                         : step === 3
                           ? '进行中'
-                          : '待处理'}
+                          : '等待中'}
                   </span>
                 </div>
               </div>
@@ -305,12 +444,12 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                   <p className='text-muted-foreground text-xs'>根据不同业务场景选择对应的处理流程，后续会触发相应的 Airflow DAG。</p>
                 </div>
 
-                <div className='grid gap-3 md:grid-cols-2 lg:grid-cols-3'>
+                <div className='grid gap-3 sm:grid-cols-1 md:grid-cols-3'>
                   {/* 各种处理模式卡片 */}
                   {/* 五经普 */}
                   <button
                     type='button'
-                    className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
+                    className={`flex min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
                       airflowDagId === 'wu_jing_pu_etl'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:bg-muted/40'
@@ -326,10 +465,10 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                     </p>
                   </button>
 
-                  {/* 四农普 */}
+                  {/* 农业普查 */}
                   <button
                     type='button'
-                    className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
+                    className={`flex min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
                       airflowDagId === 'si_nong_pu_placeholder'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:bg-muted/40'
@@ -338,17 +477,20 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                   >
                     <div className='flex items-center gap-2'>
                       <Users className='h-4 w-4 text-primary' />
-                      <div className='font-medium'>四农普数据处理（占位）</div>
+                      <div className='font-medium'>四农普数据处理</div>
+                      <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                        Coming soon
+                      </span>
                     </div>
                     <p className='text-muted-foreground text-xs'>
-                      预留四农普数据处理流程的模式，后续会接入对应的 Airflow DAG，目前仅作为占位展示。
+                      四农普数据处理流程的模式，后续会接入对应的 Airflow DAG，目前仅作为占位展示。
                     </p>
                   </button>
 
                   {/* GEP 核算 */}
                   <button
                     type='button'
-                    className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
+                    className={`flex min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
                       airflowDagId === 'gep_accounting_placeholder'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:bg-muted/40'
@@ -357,17 +499,20 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                   >
                     <div className='flex items-center gap-2'>
                       <Leaf className='h-4 w-4 text-emerald-500' />
-                      <div className='font-medium'>GEP 核算（占位）</div>
+                      <div className='font-medium'>GEP 核算</div>
+                      <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                        Coming soon
+                      </span>
                     </div>
                     <p className='text-muted-foreground text-xs'>
-                      预留生态系统产品（GEP）核算处理流程的模式，后续会接入对应的 Airflow DAG。
+                      生态系统产品（GEP）核算处理流程的模式，后续会接入对应的 Airflow DAG。
                     </p>
                   </button>
 
                   {/* 人口普查 */}
                   <button
                     type='button'
-                    className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
+                    className={`flex min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
                       airflowDagId === 'population_census_placeholder'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:bg-muted/40'
@@ -376,17 +521,20 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                   >
                     <div className='flex items-center gap-2'>
                       <Users className='h-4 w-4 text-sky-500' />
-                      <div className='font-medium'>人口普查（占位）</div>
+                      <div className='font-medium'>人口普查</div>
+                      <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                        Coming soon
+                      </span>
                     </div>
                     <p className='text-muted-foreground text-xs'>
-                      预留人口普查数据处理流程的模式，后续会接入对应的 Airflow DAG。
+                      人口普查数据处理流程的模式，后续会接入对应的 Airflow DAG。
                     </p>
                   </button>
 
                   {/* 应急管理 */}
                   <button
                     type='button'
-                    className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
+                    className={`flex min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
                       airflowDagId === 'emergency_management_placeholder'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:bg-muted/40'
@@ -395,17 +543,20 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                   >
                     <div className='flex items-center gap-2'>
                       <ShieldAlert className='h-4 w-4 text-red-500' />
-                      <div className='font-medium'>应急管理（占位）</div>
+                      <div className='font-medium'>应急管理</div>
+                      <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                        Coming soon
+                      </span>
                     </div>
                     <p className='text-muted-foreground text-xs'>
-                      预留应急管理相关数据处理流程的模式，后续会接入对应的 Airflow DAG。
+                      应急管理相关数据处理流程的模式，后续会接入对应的 Airflow DAG。
                     </p>
                   </button>
 
                   {/* 教育 */}
                   <button
                     type='button'
-                    className={`flex flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
+                    className={`flex min-h-[120px] flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors ${
                       airflowDagId === 'education_placeholder'
                         ? 'border-primary bg-primary/5'
                         : 'border-border hover:bg-muted/40'
@@ -414,10 +565,13 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                   >
                     <div className='flex items-center gap-2'>
                       <GraduationCap className='h-4 w-4 text-violet-500' />
-                      <div className='font-medium'>教育数据处理（占位）</div>
+                      <div className='font-medium'>教育数据处理</div>
+                      <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                        Coming soon
+                      </span>
                     </div>
                     <p className='text-muted-foreground text-xs'>
-                      预留教育领域数据处理流程的模式，后续会接入对应的 Airflow DAG。
+                      教育领域数据处理流程的模式，后续会接入对应的 Airflow DAG。
                     </p>
                   </button>
                 </div>
@@ -461,6 +615,7 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                             }
                             return p
                           })
+                          setUploadedFiles(relPaths)
                           setUploadStatus('uploading')
                           setUploadTotal(list.length)
                           setUploadError(null)
@@ -476,6 +631,29 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                               )
                               setRawPrefix(uploadRes.rawPrefix)
                               setUploadStatus('success')
+                              // 上传成功后创建或更新导入记录（第二步）
+                              try {
+                                if (!importRun) {
+                                  const created = await createDatasetImportRun(dataset.id, {
+                                    airflowDagId,
+                                    directory: displayDir || null,
+                                    rawPrefix: uploadRes.rawPrefix,
+                                    status: 'uploaded',
+                                  })
+                                  setImportRun(created)
+                                } else {
+                                  const updated = await updateDatasetImportRun(dataset.id, importRun.id, {
+                                    airflowDagId,
+                                    directory: displayDir || null,
+                                    rawPrefix: uploadRes.rawPrefix,
+                                    status: 'uploaded',
+                                  })
+                                  setImportRun(updated)
+                                }
+                              } catch (err) {
+                                // eslint-disable-next-line no-console
+                                console.error('updateDatasetImportRun on upload error', err)
+                              }
                             } catch (err) {
                               // eslint-disable-next-line no-console
                               console.error('uploadDatasetImportFiles error', err)
@@ -489,30 +667,67 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                           setUploadStatus('idle')
                           setUploadTotal(0)
                           setUploadError(null)
+                          setUploadedFiles([])
                         }
                       }}
                     />
 
-                    {/* 大图标卡片式目录选择区 */}
-                    <button
-                      type='button'
-                      className='mt-2 flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-8 py-12 text-center transition-colors hover:border-primary/60 hover:bg-muted'
-                      onClick={() => {
-                        const input = document.getElementById('sourceDir') as HTMLInputElement | null
-                        input?.click()
-                      }}
-                    >
-                      <div className='flex h-12 w-12 items-center justify-center rounded-full bg-background shadow-sm'>
-                        <FolderOpen className='h-6 w-6 text-primary' />
+                    {uploadStatus !== 'success' ? (
+                      <button
+                        type='button'
+                        className='mt-2 flex w-full flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border bg-muted/30 px-8 py-12 text-center transition-colors hover:border-primary/60 hover:bg-muted'
+                        onClick={() => {
+                          const input = document.getElementById('sourceDir') as HTMLInputElement | null
+                          input?.click()
+                        }}
+                      >
+                        <div className='flex h-12 w-12 items-center justify-center rounded-full bg-background shadow-sm'>
+                          <FolderOpen className='h-6 w-6 text-primary' />
+                        </div>
+                        <div className='space-y-1'>
+                          <p className='text-sm font-medium'>点击选择本地目录</p>
+                          <p className='text-muted-foreground text-xs'>系统会读取该目录下的所有文件，并在后续的数据处理流程中使用。</p>
+                        </div>
+                        <span className='mt-1 inline-flex h-8 items-center rounded-md bg-primary px-4 text-xs font-medium text-primary-foreground'>
+                          浏览本地目录
+                        </span>
+                      </button>
+                    ) : (
+                      <div className='mt-2 space-y-2 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-xs'>
+                        <div className='flex items-center justify-between gap-2'>
+                          <span className='font-medium'>已上传文件</span>
+                          <Button
+                            type='button'
+                            variant='outline'
+                            size='sm'
+                            onClick={() => {
+                              const input = document.getElementById('sourceDir') as HTMLInputElement | null
+                              input?.click()
+                            }}
+                          >
+                            重新选择目录
+                          </Button>
+                        </div>
+                        <div className='max-h-48 overflow-auto rounded bg-background px-3 py-2'>
+                          {uploadedFiles.length ? (
+                            <ul className='space-y-1'>
+                              {uploadedFiles.slice(0, 50).map((name, idx) => (
+                                <li key={idx} className='truncate'>
+                                  {name}
+                                </li>
+                              ))}
+                              {uploadedFiles.length > 50 && (
+                                <li className='text-muted-foreground'>
+                                  仅展示前 50 个文件，共 {uploadedFiles.length} 个。
+                                </li>
+                              )}
+                            </ul>
+                          ) : (
+                            <p className='text-muted-foreground'>本次上传的文件列表暂不可用。</p>
+                          )}
+                        </div>
                       </div>
-                      <div className='space-y-1'>
-                        <p className='text-sm font-medium'>点击选择本地目录</p>
-                        <p className='text-muted-foreground text-xs'>系统会读取该目录下的所有文件，并在后续的数据处理流程中使用。</p>
-                      </div>
-                      <span className='mt-1 inline-flex h-8 items-center rounded-md bg-primary px-4 text-xs font-medium text-primary-foreground'>
-                        浏览本地目录
-                      </span>
-                    </button>
+                    )}
 
                     {directory && (
                       <div className='space-y-1'>
@@ -654,6 +869,25 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                     </div>
                   </div>
                 )}
+
+                {/* 主数据校验结果查看入口（弹窗触发） */}
+                <div className='space-y-2 rounded-md border p-3 text-sm'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <div className='flex flex-col gap-0.5'>
+                      <span className='font-medium'>主数据校验结果</span>
+                      <span className='text-muted-foreground text-xs'>展示本次导入过程中发现的一对多主数据冲突，需要人工确认。</span>
+                    </div>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      size='sm'
+                      onClick={() => setValidationDialogOpen(true)}
+                    >
+                      查看主数据校验结果
+                    </Button>
+                  </div>
+                  <p className='text-muted-foreground text-[11px]'>仅统计需要人工确认的一对多冲突，详细结果以弹窗表格展示。</p>
+                </div>
               </div>
             )}
             </div>
@@ -727,6 +961,96 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
                   <pre className='whitespace-pre-wrap break-all font-mono text-[11px]'>
                     {logDialogLoading ? '...' : logDialogContent || '暂无日志内容。'}
                   </pre>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {validationDialogOpen && (
+            <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40'>
+              <div className='max-h-[80vh] w-[min(1100px,95vw)] rounded-md bg-background p-4 shadow-lg'>
+                <div className='mb-2 flex items-center justify-between gap-2'>
+                  <div className='flex flex-col gap-1'>
+                    <span className='text-sm font-medium'>主数据校验结果</span>
+                    <span className='text-muted-foreground text-[11px]'>仅展示需要人工确认的一对多冲突。</span>
+                  </div>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={() => setValidationDialogOpen(false)}
+                  >
+                    关闭
+                  </Button>
+                </div>
+                <div className='rounded border bg-muted px-2 py-1 text-[11px] text-muted-foreground'>
+                  {masterValidationLoading
+                    ? '校验结果加载中…'
+                    : '以下为本次导入过程中发现的一对多主数据冲突列表。'}
+                </div>
+                <div className='mt-2 max-h-[60vh] overflow-auto rounded border bg-background p-2 text-xs'>
+                  {masterValidationError && !masterValidationLoading && (
+                    <div className='text-red-600'>加载校验结果失败，请稍后重试。</div>
+                  )}
+                  {!masterValidationLoading && !masterValidationError && (
+                    (() => {
+                      if (!masterValidation || !masterValidation.rows) {
+                        return <div className='text-muted-foreground'>当前没有可展示的主数据校验结果。</div>
+                      }
+
+                      const conflictTypes = new Set([
+                        'NEW_CODE_ONE_TO_MANY_NAMES',
+                        'NEW_NAME_ONE_TO_MANY_CODES',
+                      ])
+                      const conflictRows = masterValidation.rows.filter((row) =>
+                        conflictTypes.has(row.issue_type),
+                      )
+
+                      if (conflictRows.length === 0) {
+                        return <div className='text-muted-foreground'>当前没有需要人工确认的一对多冲突。</div>
+                      }
+
+                      return (
+                        <div className='space-y-1'>
+                          <div className='flex items-center justify-between text-[11px] text-muted-foreground'>
+                            <span>共 {conflictRows.length} 条需要人工确认的一对多冲突</span>
+                            {masterValidation.key && <span>来源：{masterValidation.key}</span>}
+                          </div>
+                          <div className='max-h-[52vh] overflow-auto rounded border bg-background'>
+                            <table className='min-w-full border-collapse text-[11px]'>
+                              <thead className='bg-muted/60'>
+                                <tr>
+                                  <th className='border-b px-2 py-1 text-left font-medium'>类型</th>
+                                  <th className='border-b px-2 py-1 text-left font-medium'>来源文件</th>
+                                  <th className='border-b px-2 py-1 text-left font-medium'>统一社会信用代码</th>
+                                  <th className='border-b px-2 py-1 text-left font-medium'>单位详细名称</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {conflictRows.slice(0, 500).map((row, idx) => (
+                                  <tr key={idx} className='hover:bg-muted/40'>
+                                    <td className='border-b px-2 py-1 align-top'>{row.issue_type}</td>
+                                    <td className='border-b px-2 py-1 align-top'>{row.source_file || ''}</td>
+                                    <td className='border-b px-2 py-1 align-top'>
+                                      {row['统一社会信用代码'] || row['统一社会信用代码_source'] || ''}
+                                    </td>
+                                    <td className='border-b px-2 py-1 align-top'>
+                                      {row['单位详细名称'] || row['单位详细名称_source'] || row['单位详细名称_base'] || ''}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {conflictRows.length > 500 && (
+                              <div className='border-t px-2 py-1 text-[11px] text-muted-foreground'>
+                                仅展示前 500 条记录，完整结果请通过下载文件查看。
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()
+                  )}
                 </div>
               </div>
             </div>

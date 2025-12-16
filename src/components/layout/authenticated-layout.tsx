@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useRouter } from '@tanstack/react-router'
 import { getCookie } from '@/lib/cookies'
-import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 import { fetchCurrentUser } from '@/services/auth'
 import { LayoutProvider } from '@/context/layout-provider'
@@ -9,6 +8,7 @@ import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { SkipToMain } from '@/components/skip-to-main'
+import { cn } from '@/lib/utils'
 
 type AuthenticatedLayoutProps = {
   children?: React.ReactNode
@@ -59,6 +59,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
   if (isCheckingAuth) {
     return null
   }
+
   return (
     <SearchProvider>
       <LayoutProvider>
@@ -69,6 +70,9 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
             className={cn(
               // Set content container, so we can use container queries
               '@container/content',
+
+              // Force authenticated content to fill viewport height
+              'h-svh flex flex-col overflow-hidden',
 
               // If layout is fixed, set the height
               // to 100svh to prevent overflow

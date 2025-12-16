@@ -13,6 +13,7 @@ import { handleServerError } from '@/lib/handle-server-error'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
+import { SystemTitleSync } from '@/components/system-title-sync'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
 // Styles
@@ -64,10 +65,13 @@ const queryClient = new QueryClient({
     onError: (error) => {
       if (error instanceof AxiosError) {
         if (error.response?.status === 401) {
-          toast.error('Session expired!')
-          useAuthStore.getState().auth.reset()
-          const redirect = `${router.history.location.pathname}${router.history.location.search ?? ''}`
-          router.navigate({ to: '/sign-in', search: { redirect } })
+          const authState = useAuthStore.getState().auth
+          if (authState.accessToken) {
+            toast.error('Session expired!')
+            authState.reset()
+            const redirect = `${router.history.location.pathname}${router.history.location.search ?? ''}`
+            router.navigate({ to: '/sign-in', search: { redirect } })
+          }
         }
         if (error.response?.status === 500) {
           toast.error('Internal Server Error!')
@@ -109,6 +113,7 @@ if (!rootElement.innerHTML) {
         <ThemeProvider>
           <FontProvider>
             <DirectionProvider>
+              <SystemTitleSync />
               <RouterProvider router={router} />
             </DirectionProvider>
           </FontProvider>

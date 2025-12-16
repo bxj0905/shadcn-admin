@@ -35,6 +35,8 @@ function StatusCell({ row }: CellContext<User, unknown>) {
     mutation.mutate(next)
   }
 
+  const displayLabel = status === 'active' ? '启用' : status === 'inactive' ? '禁用' : row.getValue('status')
+
   return (
     <button
       type='button'
@@ -46,7 +48,7 @@ function StatusCell({ row }: CellContext<User, unknown>) {
         variant='outline'
         className={cn('capitalize w-full justify-center', badgeColor)}
       >
-        {row.getValue('status')}
+        {displayLabel}
       </Badge>
     </button>
   )
@@ -116,14 +118,6 @@ export const usersColumns: ColumnDef<User>[] = [
     cell: ({ row }) => (
       <div className='w-fit ps-2 text-nowrap'>{row.getValue('email')}</div>
     ),
-  },
-  {
-    accessorKey: 'phoneNumber',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='手机号' />
-    ),
-    cell: ({ row }) => <div>{row.getValue('phoneNumber')}</div>,
-    enableSorting: false,
   },
   {
     accessorKey: 'status',

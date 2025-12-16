@@ -79,11 +79,11 @@ export function DatasetsCreateDialog({ open, onOpenChange, teamId, onCreated }: 
             <RadioGroup
               value={type}
               onValueChange={(v) => setType(v as 'duckdb' | 'pgsql')}
-              className='grid gap-3 sm:grid-cols-2'
+              className='grid gap-3 sm:grid-cols-1 md:grid-cols-3'
             >
               <Label
                 htmlFor='dataset-type-duckdb'
-                className='border-input hover:bg-accent flex cursor-pointer flex-col items-start gap-2 rounded-md border p-3'
+                className='border-input flex min-h-[120px] cursor-pointer flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors hover:bg-muted/40'
               >
                 <div className='flex w-full items-center gap-3'>
                   <RadioGroupItem id='dataset-type-duckdb' value='duckdb' />
@@ -108,7 +108,7 @@ export function DatasetsCreateDialog({ open, onOpenChange, teamId, onCreated }: 
 
               <Label
                 htmlFor='dataset-type-pgsql'
-                className='border-input hover:bg-accent flex cursor-pointer flex-col items-start gap-2 rounded-md border p-3'
+                className='border-input flex min-h-[120px] cursor-pointer flex-col items-start gap-2 rounded-lg border p-4 text-left text-sm transition-colors hover:bg-muted/40'
               >
                 <div className='flex w-full items-center gap-3'>
                   <RadioGroupItem id='dataset-type-pgsql' value='pgsql' />
@@ -125,7 +125,43 @@ export function DatasetsCreateDialog({ open, onOpenChange, teamId, onCreated }: 
                   </div>
                 </div>
               </Label>
+
+              {/* 占位空卡片：仅用于在桌面端补齐第三列，使布局更均衡 */}
+              <div className='hidden min-h-[88px] rounded-md border border-transparent md:block' aria-hidden='true' />
             </RadioGroup>
+
+            {/* 占位类型：MySQL / OceanDB / 达梦数据库，暂不开放选择，仅展示 Coming soon */}
+            <div className='mt-2 grid gap-3 sm:grid-cols-3'>
+              <div className='border-input flex min-h-[100px] cursor-not-allowed flex-col gap-2 rounded-md border bg-muted/40 p-3 pb-4 opacity-70'>
+                <div className='flex items-center justify-between gap-2'>
+                  <div className='font-medium'>MySQL</div>
+                  <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                    Coming soon
+                  </span>
+                </div>
+                <div className='text-muted-foreground text-xs'>计划支持接入已有 MySQL 数据库，作为数据集的数据源。</div>
+              </div>
+
+              <div className='border-input flex min-h-[100px] cursor-not-allowed flex-col gap-2 rounded-md border bg-muted/40 p-3 pb-4 opacity-70'>
+                <div className='flex items-center justify-between gap-2'>
+                  <div className='font-medium'>OceanDB</div>
+                  <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                    Coming soon
+                  </span>
+                </div>
+                <div className='text-muted-foreground text-xs'>预留 OceanBase / OceanDB 等分布式数据库的数据集能力。</div>
+              </div>
+
+              <div className='border-input flex cursor-not-allowed flex-col gap-2 rounded-md border bg-muted/40 p-3 pb-4 opacity-70'>
+                <div className='flex items-center justify-between gap-2'>
+                  <div className='font-medium'>达梦数据库</div>
+                  <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200'>
+                    Coming soon
+                  </span>
+                </div>
+                <div className='text-muted-foreground text-xs'>预留对国产达梦数据库的支持，后续版本中开放。</div>
+              </div>
+            </div>
           </div>
 
           <DialogFooter>
