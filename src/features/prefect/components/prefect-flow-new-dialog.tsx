@@ -34,6 +34,8 @@ import { MonacoEditor } from '@/components/ui/monaco-editor'
 import { cn } from '@/lib/utils'
 import { FolderPlus, FilePlus } from 'lucide-react'
 import { Input } from '@/components/ui/input'
+import { toast } from 'sonner'
+import { createPrefectFlow, uploadPrefectFlowFiles } from '@/services/prefect'
 
 interface PrefectFlowNewDialogProps {
   open: boolean
@@ -248,12 +250,16 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
     expandedItems: ['root', 'flow'],
     selectedItems: ['flow'],
   })
+  const [flowName, setFlowName] = useState<string>('my_flow')
   const [code, setCode] = useState<string>(DEFAULT_CODE)
+  const [language, setLanguage] = useState<string>('python')
+  const [selectedIsFolder, setSelectedIsFolder] = useState<boolean>(true)
   const [nextId, setNextId] = useState(1)
   const [selectedId, setSelectedId] = useState<string>('flow')
   const [fileCodes, setFileCodes] = useState<Record<string, string>>({
     'flow/main.py': DEFAULT_CODE,
   })
+  const [saving, setSaving] = useState(false)
 
   // 当选中文件切换时，更新代码区；选中目录则清空
   const resolveParentId = () => {
@@ -344,6 +350,32 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
     return updated
   }
 
+  const languageFromExt = (ext?: string): string => {
+    switch (ext) {
+      case 'py':
+        return 'python'
+      case 'sql':
+        return 'sql'
+      case 'json':
+        return 'json'
+      case 'yml':
+      case 'yaml':
+        return 'yaml'
+      case 'env':
+        return 'shell'
+      case 'ts':
+      case 'tsx':
+        return 'typescript'
+      case 'js':
+      case 'jsx':
+        return 'javascript'
+      case 'md':
+        return 'markdown'
+      default:
+        return 'plaintext'
+    }
+  }
+
   const applyRename = (id: string, newName: string) => {
     const trimmed = newName.trim()
     if (!trimmed || trimmed.includes('/')) return false
@@ -410,9 +442,86 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
       if (fileCodes[id] !== undefined) return fileCodes[id]
       return prev
     })
+    setLanguage(languageFromExt(inferExtension(trimmed)))
     // 强制重建树实例，确保最新的文件/文件夹属性与图标生效
     setTreeVersion((v) => v + 1)
     return true
+  }
+
+  const collectFilesPayload = () => {
+    const files: Array<{
+      path: string
+      code: string
+      flowType?: 'main' | 'feature' | 'subflow'
+      name?: string
+    }> = []
+    Object.entries(items).forEach(([id, item]) => {
+      if (Array.isArray(item.children)) return
+      const codeContent = fileCodes[id] ?? DEFAULT_CODE
+      const path = id.startsWith('/') ? id.slice(1) : id
+      const ext = item.fileExtension
+      const flowType: 'main' | 'feature' | 'subflow' | undefined =
+        id === 'flow/main.py' ? 'main' : ext ? 'feature' : undefined
+      files.push({
+        path,
+        code: codeContent,
+        flowType,
+        name: item.name,
+      })
+    })
+    return files
+  }
+
+  const resetAllStates = () => {
+    setItems(initialItems)
+    setTreeState({
+      expandedItems: ['root', 'flow'],
+      selectedItems: ['flow'],
+    })
+    setTreeVersion((v) => v + 1)
+    setFlowName('my_flow')
+    setCode(DEFAULT_CODE)
+    setLanguage('python')
+    setSelectedIsFolder(true)
+    setNextId(1)
+    setSelectedId('flow')
+    setFileCodes({
+      'flow/main.py': DEFAULT_CODE,
+    })
+  }
+
+  const handleSave = async () => {
+    if (saving) return
+    const trimmedName = flowName.trim()
+    if (!trimmedName) {
+      toast.error('请输入 Flow 名称')
+      return
+    }
+    setSaving(true)
+    try {
+      const files = collectFilesPayload()
+      if (files.length === 0) {
+        toast.error('没有可上传的文件')
+        return
+      }
+      await uploadPrefectFlowFiles(files)
+
+      const mainCode = fileCodes['flow/main.py'] ?? DEFAULT_CODE
+      await createPrefectFlow({
+        name: trimmedName,
+        code: mainCode,
+      })
+
+      toast.success('保存成功', { description: '已上传文件并创建 Flow 与 Deployment' })
+      resetAllStates()
+      onOpenChange(false)
+    } catch (error) {
+      toast.error('保存失败', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   // 同步树状态变化（键盘选择等）到右侧代码区和选中状态
@@ -432,6 +541,15 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
           <DialogDescription className='sr-only'>
             在左侧文件树中添加文件或文件夹，并在右侧编辑 Python 代码。
           </DialogDescription>
+          <div className='mt-2 flex items-center gap-3'>
+            <span className='text-xs font-medium text-muted-foreground'>Flow 名称</span>
+            <Input
+              className='h-8 w-64'
+              value={flowName}
+              onChange={(e) => setFlowName(e.target.value)}
+              placeholder='请输入 Flow 名称'
+            />
+          </div>
         </DialogHeader>
 
         <div className='flex flex-1 gap-4 px-6 pb-6 pt-4'>
@@ -471,13 +589,17 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
                 onSelectionChange={(id, isFolder) => {
                   setSelectedId(id)
                   setTreeState((prev) => ({ ...prev, selectedItems: [id] }))
+                  setSelectedIsFolder(isFolder)
                   if (!isFolder) {
+                    const ext = items[id]?.fileExtension
+                    setLanguage(languageFromExt(ext))
                     setFileCodes((prev) => {
                       if (prev[id] !== undefined) return prev
                       return { ...prev, [id]: DEFAULT_CODE }
                     })
                     setCode((prev) => (prev === fileCodes[id] ? prev : fileCodes[id] ?? DEFAULT_CODE))
                   } else {
+                    setLanguage('plaintext')
                     setCode('')
                   }
                 }}
@@ -495,22 +617,41 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
           {/* 右侧代码编辑器 */}
           <div className='flex min-w-0 flex-1 flex-col gap-2'>
             <div className='flex items-center justify-between'>
-              <span className='text-xs font-semibold text-muted-foreground'>FLOW CODE (Python)</span>
+              <span className='text-xs font-semibold text-muted-foreground'>
+                FLOW CODE ({language.toUpperCase()})
+              </span>
             </div>
             <div className='flex-1 min-h-0'>
-              <MonacoEditor
-                value={code}
-                onChange={(v) => setCode(v ?? '')}
-                language='python'
-                height='100%'
-              />
+              {selectedIsFolder ? (
+                <div className='flex h-full items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground'>
+                  请选择文件以编辑
+                </div>
+              ) : (
+                <MonacoEditor
+                  value={code}
+                  onChange={(v) => {
+                    const next = v ?? ''
+                    setCode(next)
+                    // 同步当前文件的内容缓存
+                    const isFolder = Array.isArray(items[selectedId]?.children)
+                    if (!isFolder) {
+                      setFileCodes((prev) => {
+                        if (prev[selectedId] === next) return prev
+                        return { ...prev, [selectedId]: next }
+                      })
+                    }
+                  }}
+                  language={language}
+                  height='100%'
+                />
+              )}
             </div>
             <div className='flex justify-end gap-2 pt-2'>
               <Button variant='outline' size='sm' onClick={() => onOpenChange(false)}>
                 取消
               </Button>
-              <Button size='sm' disabled>
-                保存（待接后端）
+              <Button size='sm' onClick={handleSave} disabled={saving}>
+                {saving ? '保存中...' : '保存'}
               </Button>
             </div>
           </div>

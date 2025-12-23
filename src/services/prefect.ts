@@ -250,6 +250,27 @@ export async function fetchPrefectFlowRunLogs(
   }
 }
 
+// 将本地编辑的 Flow 文件上传到 RustFS（后端会落到 dataflow bucket）
+export async function uploadPrefectFlowFiles(
+  files: Array<{
+    path: string
+    code: string
+    flowType?: 'main' | 'feature' | 'subflow'
+    name?: string
+  }>,
+) {
+  try {
+    const res = await axios.post<{ uploaded: number; keys: string[] }>(
+      '/api/prefect/flows/upload-files',
+      { files },
+    )
+    return res.data
+  } catch (error) {
+    handleAuthError(error)
+    throw error
+  }
+}
+
 export async function resumePrefectFlowRun(runId: string) {
   try {
     const res = await axios.post<PrefectFlowRun>(
