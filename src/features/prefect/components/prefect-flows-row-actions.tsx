@@ -14,18 +14,15 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { CodeEditor } from '@/components/ui/shadcn-io/code-editor'
 import {
   deletePrefectFlow,
   updatePrefectFlow,
   runPrefectFlow,
-  fetchPrefectFlowCode,
-  updatePrefectFlowCode,
-  testPrefectFlow,
   type PrefectFlow,
 } from '@/services/prefect'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { PrefectFlowEditDialog } from './prefect-flow-edit-dialog'
 
 type PrefectFlowsRowActionsProps = {
   row: Row<PrefectFlow>
@@ -115,11 +112,7 @@ export function PrefectFlowsRowActions({ row }: PrefectFlowsRowActionsProps) {
         onOpenChange={setEditTagsOpen}
         flow={flow}
       />
-      <PrefectFlowEditCodeDialog
-        open={editCodeOpen}
-        onOpenChange={setEditCodeOpen}
-        flow={flow}
-      />
+      <PrefectFlowEditDialog open={editCodeOpen} onOpenChange={setEditCodeOpen} flow={flow} />
       <PrefectFlowDeleteDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -255,165 +248,3 @@ function PrefectFlowDeleteDialog({
   )
 }
 
-type PrefectFlowEditCodeDialogProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  flow: PrefectFlow
-}
-
-function PrefectFlowEditCodeDialog({
-  open,
-  onOpenChange,
-  flow,
-}: PrefectFlowEditCodeDialogProps) {
-  const { t } = useTranslation()
-  const queryClient = useQueryClient()
-  const [code, setCode] = useState('')
-  const [isLoadingCode, setIsLoadingCode] = useState(false)
-  const [lastTestResult, setLastTestResult] = useState<string | null>(null)
-
-  // 打开弹窗时拉取当前代码
-  useEffect(() => {
-    if (!open) return
-    let cancelled = false
-    ;(async () => {
-      setIsLoadingCode(true)
-      try {
-        const res = await fetchPrefectFlowCode(flow.id)
-        if (!cancelled) {
-          setCode(res.code ?? '')
-        }
-      } catch (error) {
-        console.error(error)
-        if (!cancelled) {
-          toast.error(t('prefect.dialog.editCode.loadError'))
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingCode(false)
-        }
-      }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [open, flow.id, t])
-
-  const mutation = useMutation({
-    mutationFn: (payload: { id: string; code: string }) =>
-      updatePrefectFlowCode(payload.id, payload.code),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['prefect', 'flows'] })
-    },
-  })
-
-  const testMutation = useMutation({
-    mutationFn: (payload: { id: string; code: string }) =>
-      testPrefectFlow(payload.id, payload.code),
-    onSuccess: (result) => {
-      const status = result.status
-      const msg =
-        status === 'COMPLETED'
-          ? t('prefect.dialog.editCode.testSuccess')
-          : status === 'TIMEOUT'
-            ? t('prefect.dialog.editCode.testTimeout')
-            : t('prefect.dialog.editCode.testFailed', {
-                state: result.state_type,
-              })
-      setLastTestResult(msg)
-      toast.info(msg)
-    },
-    onError: (error) => {
-      console.error(error)
-      const msg = t('prefect.dialog.editCode.testError')
-      setLastTestResult(msg)
-      toast.error(msg)
-    },
-  })
-
-  const handleConfirm = () => {
-    const trimmed = code.trim()
-    if (!trimmed) return
-    mutation.mutate(
-      { id: flow.id, code: trimmed },
-      {
-        onSuccess: () => {
-          onOpenChange(false)
-        },
-        onError: (error) => {
-          console.error(error)
-          toast.error(t('prefect.dialog.editCode.saveError'))
-        },
-      },
-    )
-  }
-
-  const disabled = mutation.isPending || isLoadingCode || testMutation.isPending
-
-  const handleTest = () => {
-    const trimmed = code.trim()
-    if (!trimmed) return
-    setLastTestResult(null)
-    testMutation.mutate({ id: flow.id, code: trimmed })
-  }
-
-  return (
-    <ConfirmDialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen) {
-          setCode('')
-        }
-        onOpenChange(nextOpen)
-      }}
-      handleConfirm={handleConfirm}
-      disabled={disabled}
-      isLoading={mutation.isPending}
-      title={t('prefect.dialog.editCode.title', { name: flow.name })}
-      className='w-[1200px] max-w-none h-[800px] max-h-[95vh]'
-      desc={
-        <div className='flex h-[620px] flex-col space-y-4'>
-          {isLoadingCode ? (
-            <div className='text-sm text-muted-foreground'>
-              {t('prefect.dialog.editCode.loading')}
-            </div>
-          ) : (
-            <>
-              <div className='flex flex-1 flex-col space-y-2'>
-                <Label htmlFor='prefect-flow-code-edit'>
-                  {t('prefect.dialog.editCode.codeLabel')}
-                </Label>
-                <CodeEditor
-                  value={code}
-                  onChange={setCode}
-                  language='python'
-                  height='100%'
-                  placeholder={t('prefect.dialog.create.codePlaceholder')}
-                  className='border-border flex-1'
-                />
-              </div>
-              <div className='flex items-center justify-between pt-2'>
-                <Button
-                  type='button'
-                  size='sm'
-                  variant='outline'
-                  onClick={handleTest}
-                  disabled={testMutation.isPending || isLoadingCode}
-                >
-                  {testMutation.isPending
-                    ? t('prefect.dialog.editCode.testing')
-                    : t('prefect.dialog.editCode.testButton')}
-                </Button>
-                <div className='text-xs text-muted-foreground text-right min-h-[1.25rem]'>
-                  {lastTestResult}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      }
-      confirmText={t('prefect.dialog.editCode.confirm')}
-    />
-  )
-}

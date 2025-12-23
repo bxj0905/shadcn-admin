@@ -243,6 +243,14 @@ const DEFAULT_CODE = [
   '',
 ].join('\n')
 
+const sanitizePrefix = (prefixRaw?: string) => {
+  if (!prefixRaw) return ''
+  let prefix = prefixRaw.trim().replace(/^[\\/]+/, '').replace(/[\\/]+$/, '')
+  prefix = prefix.replace(/[^\w\s\-_.\\/]/g, '_')
+  if (!prefix) return ''
+  return `${prefix}/`
+}
+
 export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialogProps) {
   const [items, setItems] = useState(initialItems)
   const [treeVersion, setTreeVersion] = useState(0)
@@ -456,12 +464,30 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
       name?: string
     }> = []
     Object.entries(items).forEach(([id, item]) => {
-      if (Array.isArray(item.children)) return
-      const codeContent = fileCodes[id] ?? DEFAULT_CODE
       const path = id.startsWith('/') ? id.slice(1) : id
+
+      // 文件夹：上传一个占位对象，确保 RustFS 里保留目录前缀（S3 需要对象才能显式创建“文件夹”）
+      if (Array.isArray(item.children)) {
+        if (id === 'root') return // 根节点不需要
+        files.push({
+          path: `${path}/`,
+          code: '',
+          name: item.name,
+        })
+        return
+      }
+
+      // 文件
+      const codeContent = fileCodes[id] ?? DEFAULT_CODE
       const ext = item.fileExtension
       const flowType: 'main' | 'feature' | 'subflow' | undefined =
-        id === 'flow/main.py' ? 'main' : ext ? 'feature' : undefined
+        id === 'flow/main.py'
+          ? 'main'
+          : path.startsWith('flow/feature_flows/')
+            ? 'subflow'
+            : ext
+              ? 'feature'
+              : undefined
       files.push({
         path,
         code: codeContent,
@@ -497,6 +523,7 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
       toast.error('请输入 Flow 名称')
       return
     }
+    const basePrefix = sanitizePrefix(trimmedName) || 'flow/'
     setSaving(true)
     try {
       const files = collectFilesPayload()
@@ -504,12 +531,15 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
         toast.error('没有可上传的文件')
         return
       }
-      await uploadPrefectFlowFiles(files)
+      await uploadPrefectFlowFiles(files, { basePrefix })
 
       const mainCode = fileCodes['flow/main.py'] ?? DEFAULT_CODE
       await createPrefectFlow({
         name: trimmedName,
         code: mainCode,
+        labels: {
+          rustfs_dir_prefix: basePrefix,
+        },
       })
 
       toast.success('保存成功', { description: '已上传文件并创建 Flow 与 Deployment' })

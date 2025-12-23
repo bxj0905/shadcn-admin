@@ -258,11 +258,26 @@ export async function uploadPrefectFlowFiles(
     flowType?: 'main' | 'feature' | 'subflow'
     name?: string
   }>,
+  options?: { basePrefix?: string },
 ) {
   try {
     const res = await axios.post<{ uploaded: number; keys: string[] }>(
       '/api/prefect/flows/upload-files',
-      { files },
+      { files, basePrefix: options?.basePrefix },
+    )
+    return res.data
+  } catch (error) {
+    handleAuthError(error)
+    throw error
+  }
+}
+
+export async function fetchPrefectFlowFiles(
+  flowId: string,
+): Promise<{ files: Array<{ path: string; code: string }>; prefix: string }> {
+  try {
+    const res = await axios.get<{ files: Array<{ path: string; code: string }>; prefix: string }>(
+      `/api/prefect/flows/${encodeURIComponent(flowId)}/files`,
     )
     return res.data
   } catch (error) {
