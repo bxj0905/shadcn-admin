@@ -25,11 +25,12 @@ type DatasetsImportDialogProps = {
   dataset: Dataset
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialStep?: 1 | 2 | 3
 }
 
-export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsImportDialogProps) {
+export function DatasetsImportDialog({ dataset, open, onOpenChange, initialStep = 1 }: DatasetsImportDialogProps) {
   const queryClient = useQueryClient()
-  const [step, setStep] = useState<1 | 2 | 3>(1)
+  const [step, setStep] = useState<1 | 2 | 3>(initialStep)
   const [airflowDagId, setAirflowDagId] = useState('wu_jing_pu_etl')
   const [config, setConfig] = useState('')
   const [directory, setDirectory] = useState('')
@@ -87,8 +88,8 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
 
   const onClose = (value: boolean) => {
     if (!value) {
-      // 重置为第一步，避免下次打开直接停在配置页
-      setStep(1)
+      // 重置为初始步骤，避免下次打开直接停在配置页
+      setStep(initialStep)
       setRunInfo(null)
       setTasks([])
       setDirectory('')
@@ -101,6 +102,13 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
     }
     onOpenChange(value)
   }
+
+  // 打开对话框时，先设置初始步骤
+  useEffect(() => {
+    if (open) {
+      setStep(initialStep)
+    }
+  }, [open, initialStep])
 
   // 打开对话框时加载最近一次导入记录；如果是成功态，则直接跳到第三步用于查看日志
   useEffect(() => {
@@ -138,20 +146,27 @@ export function DatasetsImportDialog({ dataset, open, onOpenChange }: DatasetsIm
             setDirectory(latest.directory || '')
             setRawPrefix(latest.rawPrefix || null)
             setUploadStatus('success')
+          } else {
+            // 如果有导入记录但状态不是 success 或 uploaded，使用 initialStep
+            setStep(initialStep)
           }
         } else {
+          // 没有导入记录，使用 initialStep
           setImportRun(null)
+          setStep(initialStep)
         }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('fetchDatasetImportRuns error', err)
+        // 出错时也使用 initialStep
+        setStep(initialStep)
       }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [open, dataset.id])
+  }, [open, dataset.id, initialStep])
 
   const handleStartProcessing = async () => {
     if (submitting || !airflowDagId) return

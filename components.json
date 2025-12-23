@@ -19,6 +19,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@simple-ai": "https://simple-ai.dev/r/{name}.json"
+    "@simple-ai": "https://simple-ai.dev/r/{name}.json",
+    "@reui": "https://reui.io/r/{name}.json"
   }
 }

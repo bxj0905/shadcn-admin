@@ -90,6 +90,7 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Data Processing',
+          i18nKey: 'sidebar.nav.dataProcessing',
           url: '/data-processing',
           icon: ListTodo,
         },

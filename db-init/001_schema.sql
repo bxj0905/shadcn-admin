@@ -253,8 +253,8 @@ CREATE TABLE IF NOT EXISTS team_datasets (
   team_id      BIGINT NOT NULL,
   name         VARCHAR(200) NOT NULL,
   description  VARCHAR(500),
-  type         VARCHAR(20) NOT NULL,  -- duckdb | pgsql
-  storage_path VARCHAR(500) NOT NULL, -- duckdb: MinIO 路径; pgsql: DB 名
+  type         VARCHAR(20) NOT NULL,  -- duckdb | pgsql | mysql | oceanbase | mssql | tidb
+  storage_path VARCHAR(500) NOT NULL, -- duckdb: RustFS/MinIO 目录; 其他: 对应数据库名或连接标识
   created_by   BIGINT NOT NULL,
   created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -287,6 +287,29 @@ CREATE TABLE IF NOT EXISTS team_dataset_members (
 
 CREATE INDEX IF NOT EXISTS idx_dataset_members_user_id
   ON team_dataset_members(user_id);
+
+-- 数据集导入运行记录（适配 Prefect Flow）
+CREATE TABLE IF NOT EXISTS dataset_import_runs (
+  id                BIGSERIAL PRIMARY KEY,
+  dataset_id        BIGINT NOT NULL,
+  prefect_flow_id   VARCHAR(200),  -- Prefect Flow ID
+  prefect_run_id    VARCHAR(200),  -- Prefect Flow Run ID
+  directory         VARCHAR(500),  -- 上传的目录名（用于显示）
+  raw_prefix        VARCHAR(500),  -- RustFS 存储前缀（例如：team-8/dataset-19/sourcedata/）
+  status            VARCHAR(50),   -- queued | running | success | failed | cancelled
+  extra             JSONB,         -- 额外信息（例如统计日期、配置参数等）
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_dataset_import_runs_dataset_id
+    FOREIGN KEY (dataset_id) REFERENCES team_datasets(id)
+      ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_dataset_import_runs_dataset_id
+  ON dataset_import_runs(dataset_id);
+
+CREATE INDEX IF NOT EXISTS idx_dataset_import_runs_created_at
+  ON dataset_import_runs(created_at DESC);
 
 -- 6. 审计日志 & 系统设置
 CREATE TABLE IF NOT EXISTS audit_logs (

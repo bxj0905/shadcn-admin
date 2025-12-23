@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { AirflowDagsPage } from '@/features/airflow/page';
+import { PrefectFlowsPage } from '@/features/prefect/page';
 
 export const Route = createFileRoute('/_authenticated/data-processing')({
-  component: AirflowDagsPage,
+  component: PrefectFlowsPage,
 });

@@ -277,3 +277,37 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* React Flow 深色模式样式 */
+.dark .react-flow__controls {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.dark .react-flow__controls-button {
+  background: var(--card) !important;
+  border-bottom: 1px solid var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.dark .react-flow__controls-button:hover {
+  background: var(--accent) !important;
+}
+
+.dark .react-flow__controls-button svg {
+  fill: var(--foreground) !important;
+}
+
+.dark .react-flow__minimap {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+}
+
+.dark .react-flow__minimap-mask {
+  fill: rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .react-flow__minimap-node {
+  fill: var(--muted) !important;
+  stroke: var(--border) !important;
+}

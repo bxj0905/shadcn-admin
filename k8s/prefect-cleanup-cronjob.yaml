@@ -1,0 +1,101 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: prefect-job-cleanup
+  namespace: prefect
+  labels:
+    app: prefect-cleanup
+    component: cleanup-job
+spec:
+  # 每天 0 点执行（UTC 时间，根据时区调整）
+  # 如果需要北京时间 0 点，使用 "0 0 16 * * *" (UTC+8)
+  schedule: "0 0 * * *"
+  # 保留最近 3 次成功的执行记录
+  successfulJobsHistoryLimit: 3
+  # 保留最近 1 次失败的执行记录
+  failedJobsHistoryLimit: 1
+  # 并发策略：如果上一次执行还在运行，跳过本次执行
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      # 任务完成后 1 小时自动删除
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app: prefect-cleanup
+        spec:
+          # 使用包含 kubectl 的镜像
+          serviceAccountName: prefect-cleanup
+          containers:
+          - name: cleanup
+            image: bitnami/kubectl:latest
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              echo "=== 开始清理 Prefect 已完成的 Job 和 Pod ==="
+              echo "时间: $(date)"
+              
+              # 清理已完成的 Job
+              echo ""
+              echo "--- 清理已完成的 Job ---"
+              COMPLETED_JOBS=$(kubectl get jobs -n prefect -o json | jq -r '.items[] | select(.status.succeeded == 1) | .metadata.name' || echo "")
+              if [ -z "$COMPLETED_JOBS" ]; then
+                echo "没有找到已完成的 Job"
+              else
+                echo "找到以下已完成的 Job:"
+                echo "$COMPLETED_JOBS"
+                echo "$COMPLETED_JOBS" | xargs -r kubectl delete jobs -n prefect
+                echo "已删除已完成的 Job"
+              fi
+              
+              # 清理已完成的 Pod（状态为 Succeeded）
+              echo ""
+              echo "--- 清理已完成的 Pod (Succeeded) ---"
+              SUCCEEDED_PODS=$(kubectl get pods -n prefect -o json | jq -r '.items[] | select(.status.phase == "Succeeded") | .metadata.name' || echo "")
+              if [ -z "$SUCCEEDED_PODS" ]; then
+                echo "没有找到已完成的 Pod (Succeeded)"
+              else
+                echo "找到以下已完成的 Pod:"
+                echo "$SUCCEEDED_PODS"
+                echo "$SUCCEEDED_PODS" | xargs -r kubectl delete pods -n prefect
+                echo "已删除已完成的 Pod (Succeeded)"
+              fi
+              
+              # 清理失败的 Pod（状态为 Failed，可选）
+              echo ""
+              echo "--- 清理失败的 Pod (Failed) ---"
+              FAILED_PODS=$(kubectl get pods -n prefect -o json | jq -r '.items[] | select(.status.phase == "Failed") | .metadata.name' || echo "")
+              if [ -z "$FAILED_PODS" ]; then
+                echo "没有找到失败的 Pod"
+              else
+                echo "找到以下失败的 Pod:"
+                echo "$FAILED_PODS"
+                echo "$FAILED_PODS" | xargs -r kubectl delete pods -n prefect
+                echo "已删除失败的 Pod"
+              fi
+              
+              # 清理孤立的 Pod（没有关联的 Job，且已完成或失败）
+              echo ""
+              echo "--- 清理孤立的 Pod ---"
+              ORPHAN_PODS=$(kubectl get pods -n prefect -o json | jq -r '.items[] | select((.status.phase == "Succeeded" or .status.phase == "Failed") and (.metadata.ownerReferences | length == 0 or (.metadata.ownerReferences[] | .kind != "Job"))) | .metadata.name' || echo "")
+              if [ -z "$ORPHAN_PODS" ]; then
+                echo "没有找到孤立的 Pod"
+              else
+                echo "找到以下孤立的 Pod:"
+                echo "$ORPHAN_PODS"
+                echo "$ORPHAN_PODS" | xargs -r kubectl delete pods -n prefect
+                echo "已删除孤立的 Pod"
+              fi
+              
+              echo ""
+              echo "=== 清理完成 ==="
+              echo "时间: $(date)"
+            env:
+            - name: KUBERNETES_NAMESPACE
+              value: prefect
+          # 重启策略：不重启
+          restartPolicy: Never
+

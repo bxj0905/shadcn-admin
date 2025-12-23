@@ -1,0 +1,70 @@
+.ace_editor.ace-twilight {
+  background-color: #272822 !important;
+  color: #f8f8f2 !important;
+  font-family: "Roboto Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.ace-twilight .ace_keyword {
+  color: #f92672 !important;
+}
+
+.ace-twilight .ace_support.ace_function,
+.ace-twilight .ace_support.ace_class,
+.ace-twilight .ace_support.ace_type {
+  color: #66d9ef !important;
+}
+
+.ace-twilight .ace_identifier,
+.ace-twilight .ace_variable {
+  color: #f8f8f2 !important;
+}
+
+.ace-twilight .ace_string {
+  color: #e6db74 !important;
+}
+
+.ace-twilight .ace_constant.ace_numeric {
+  color: #ae81ff !important;
+}
+
+.ace-twilight .ace_comment {
+  color: #75715e !important;
+  font-style: italic;
+}
+
+.ace-twilight .ace_operator,
+.ace-twilight .ace_punctuation {
+  color: #f8f8f2 !important;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
