@@ -105,12 +105,14 @@ files = collect_raw_files(prefix="team-1/dataset-2/sourcedata/")
 
 以下任务需要从原始文件 `dataset_etl_flow.py` 中迁移：
 
-1. **tasks/convert_to_parquet.py** - 从第 510 行开始
-2. **tasks/clean_data.py** - 从第 728 行开始
-3. **tasks/upload_processed_files.py** - 从第 1089 行开始
-4. **tasks/encrypt_sensitive_fields.py** - 从第 2182 行开始
-5. **tasks/aggregate_data.py** - 从第 2235 行开始
-6. **feature_flows/data_validation_flow.py** - 从第 1170 行开始（完整的验证逻辑）
+1. ✅ **tasks/convert_to_parquet.py** - 已完成
+2. ✅ **tasks/clean_data.py** - 已完成
+3. ⏳ **tasks/upload_processed_files.py** - 从第 1089 行开始
+4. ⏳ **tasks/encrypt_sensitive_fields.py** - 从第 2182 行开始
+5. ⏳ **tasks/aggregate_data.py** - 从第 2235 行开始
+6. ⏳ **feature_flows/data_validation_flow.py** - 从第 1170 行开始（完整的验证逻辑）
+
+✅ 已完成 ⏳ 待完善
 
 ## 迁移步骤
 

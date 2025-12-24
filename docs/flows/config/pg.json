@@ -1,0 +1,9 @@
+{
+  "host": "192.168.6.181",
+  "port": 32345,
+  "database": "mapping_db",
+  "username": "rw_user",
+  "password": "VjjdJtDvJhG39WpqzxLMTr2I/Z5tPMalE88=",
+  "sslmode": "disable"
+}
+

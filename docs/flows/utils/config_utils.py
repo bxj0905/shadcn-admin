@@ -85,25 +85,59 @@ def _get_default_sensitive_fields() -> list[str]:
     ]
 
 
+def _get_flow_base_path() -> str:
+    """
+    获取当前 flow 的基础路径（用于构建配置文件路径）
+    优先级：
+    1. 从环境变量 PREFECT_FLOW_DIR_PREFIX 获取（如果设置）
+    2. 从 Prefect runtime 获取 flow 名称，构建路径
+    3. 默认使用 'flow'
+    
+    返回: flow 的基础路径前缀（例如 'my-flow/' 或 'flow/'）
+    """
+    # 优先级 1: 从环境变量获取
+    env_prefix = os.environ.get("PREFECT_FLOW_DIR_PREFIX")
+    if env_prefix:
+        return env_prefix.rstrip('/') + '/'
+    
+    # 优先级 2: 从 Prefect runtime 获取 flow 名称
+    try:
+        from prefect.runtime import flow_run
+        if hasattr(flow_run, 'flow_name') and flow_run.flow_name:
+            # 使用 flow 名称作为路径前缀
+            flow_name = flow_run.flow_name
+            return f"{flow_name}/"
+    except Exception:
+        pass
+    
+    # 优先级 3: 默认值
+    return "flow/"
+
+
 def load_sensitive_fields() -> list[str]:
     """
     从 sensitive_fields.yaml 配置文件加载敏感字段列表
     优先级：
-    1. 从 Prefect Blocks 的 dataflow 配置中读取 config/sensitive_fields.yaml
+    1. 从 S3 中 flow 代码同目录的 config/sensitive_fields.yaml 读取
+       路径格式：{flow_name}/flow/config/sensitive_fields.yaml
     2. 使用内嵌的默认配置
     
     返回: 敏感字段名列表
     """
     config = None
     
-    # 优先级 1: 从 Prefect Blocks 的 dataflow 配置中读取
+    # 优先级 1: 从 S3 读取配置文件（与 flow 代码同目录）
     try:
-        # 尝试从 dataflow bucket 读取配置文件
+        # 获取 flow 的基础路径
+        flow_base_path = _get_flow_base_path()
+        # 配置文件路径：与 flow 代码同目录结构
+        config_key = f"{flow_base_path}flow/config/sensitive_fields.yaml"
+        
         s3_block = S3Bucket.load("rustfs-s3storage")
         bucket_name = s3_block.bucket_name
         
+        # 使用 dataflow bucket（与 flow 代码存储在同一 bucket）
         dataflow_bucket = os.environ.get("RUSTFS_DATAFLOW_BUCKET", "dataflow")
-        config_key = "config/sensitive_fields.yaml"
         
         # 获取 S3 客户端
         access_key = getattr(s3_block, "aws_access_key_id", None) or os.environ.get(
@@ -121,7 +155,7 @@ def load_sensitive_fields() -> list[str]:
             aws_secret_access_key=secret_key,
         )
         
-        # 尝试从 dataflow bucket 读取
+        # 从 dataflow bucket 读取配置文件
         try:
             response = s3_client.get_object(Bucket=dataflow_bucket, Key=config_key)
             content = response['Body'].read().decode('utf-8')
@@ -150,7 +184,8 @@ def load_sql_column_types() -> dict[str, str]:
     """
     从 column_types.yaml 配置文件加载字段名到数据类型的映射
     优先级：
-    1. 从 Prefect Blocks 的 dataflow 配置中读取 config/column_types.yaml
+    1. 从 S3 中 flow 代码同目录的 config/column_types.yaml 读取
+       路径格式：{flow_name}/flow/config/column_types.yaml
     2. 使用内嵌的默认配置
     
     返回: {字段名: 类型} 的字典，类型为 'DECIMAL', 'INTEGER', 'TEXT', 'BOOLEAN'
@@ -158,16 +193,18 @@ def load_sql_column_types() -> dict[str, str]:
     column_types = {}
     config = None
     
-    # 优先级 1: 从 Prefect Blocks 的 dataflow 配置中读取
+    # 优先级 1: 从 S3 读取配置文件（与 flow 代码同目录）
     try:
-        # 尝试从 dataflow bucket 读取配置文件
+        # 获取 flow 的基础路径
+        flow_base_path = _get_flow_base_path()
+        # 配置文件路径：与 flow 代码同目录结构
+        config_key = f"{flow_base_path}flow/config/column_types.yaml"
+        
         s3_block = S3Bucket.load("rustfs-s3storage")
         bucket_name = s3_block.bucket_name
         
-        # 尝试从 dataflow bucket 读取（如果 bucket 名称不同，需要调整）
-        # 或者使用环境变量指定的 dataflow bucket
+        # 使用 dataflow bucket（与 flow 代码存储在同一 bucket）
         dataflow_bucket = os.environ.get("RUSTFS_DATAFLOW_BUCKET", "dataflow")
-        config_key = "config/column_types.yaml"
         
         # 获取 S3 客户端
         access_key = getattr(s3_block, "aws_access_key_id", None) or os.environ.get(
@@ -185,7 +222,7 @@ def load_sql_column_types() -> dict[str, str]:
             aws_secret_access_key=secret_key,
         )
         
-        # 尝试从 dataflow bucket 读取
+        # 从 dataflow bucket 读取配置文件
         try:
             response = s3_client.get_object(Bucket=dataflow_bucket, Key=config_key)
             content = response['Body'].read().decode('utf-8')

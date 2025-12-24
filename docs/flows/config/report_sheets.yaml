@@ -1,0 +1,591 @@
+# configDir/report_sheets.yaml
+- sheet: 法人单位
+  sql: |
+    SELECT
+      COALESCE("产业", '——') AS 产业,
+      COALESCE("行业门类", '——') AS 门类,
+
+      -- 单位数量及占比
+      COUNT(*) AS 数量,
+      ROUND(100*COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 数量占比,
+
+      -- 营业成本及占比
+      SUM("营业成本") AS 营业成本合计,
+      ROUND(100*SUM("营业成本") / SUM(SUM("营业成本")) OVER (), 4) AS 营业成本占比,
+
+      -- 利润及占比
+      SUM("营业利润") AS 收入合计,
+      ROUND(100*SUM("营业利润") / SUM(SUM("营业利润")) OVER (), 4) AS 营业利润占比,
+
+      -- 从业人数及占比
+      SUM("期末从业人数") AS 人数合计,
+      ROUND(100*SUM("期末从业人数") / SUM(SUM("期末从业人数")) OVER (), 4) AS 人数占比,
+      ROUND(SUM("期末从业人数")::numeric / NULLIF(COUNT(*), 0), 0) AS 户均人数,
+
+      -- 女性人数及占比
+      SUM("其中女性从业人数") AS 女性人数合计,
+      ROUND(100*SUM("其中女性从业人数") / SUM(SUM("其中女性从业人数")) OVER (), 4) AS 女性占比,
+
+      -- 薪酬及占比
+      SUM("应付职工薪酬") * 10 AS 薪酬合计（千元）,
+      ROUND(100*SUM("应付职工薪酬") / SUM(SUM("应付职工薪酬")) OVER (), 4) AS 薪酬占比,
+      ROUND(SUM("应付职工薪酬")::numeric / NULLIF(SUM("期末从业人数"), 0) * 10000, 4) AS 人均薪酬（元）,
+
+      -- 增加值及占比
+      SUM("增加值") AS 增加值合计,
+      ROUND(100*SUM("增加值") / SUM(SUM("增加值")) OVER (), 4) AS 增加值占比,
+
+      -- 营业收入及占比
+      SUM("营业收入") AS 营业收入合计,
+      ROUND(100*SUM("营业收入") / SUM(SUM("营业收入")) OVER (), 4) AS 营业收入占比,
+      ROUND(SUM("营业收入")::numeric / NULLIF(COUNT(*), 0) * 10000, 4) AS 户均营业收入,
+
+      -- 资产及占比
+      SUM("资产总计") AS 资产合计,
+      ROUND(100*SUM("资产总计") / SUM(SUM("资产总计")) OVER (), 4) AS 资产占比,
+      
+      -- 负债及占比
+      SUM("负债合计") AS 负债合计,
+      ROUND(100*SUM("负债合计") / SUM(SUM("负债合计")) OVER (), 4) AS 负债占比,
+
+      -- 税收及占比
+      SUM("应交增值税") AS 应交增值税合计,
+      SUM("税金及附加") AS 税金及附加合计,
+      SUM("税收合计") AS 税收收入,
+      ROUND(100*SUM("税收合计") / SUM(SUM("税收合计")) OVER (), 4) AS 税收收入占比,
+
+      -- 研发费用及占比
+      SUM("研发费用") AS 研发费用合计,
+      ROUND(100*SUM("研发费用") / SUM(SUM("研发费用")) OVER (), 4) AS 研发费用占比,
+
+      -- 研发人员及占比
+      SUM("研发人员数") AS 研发人员合计,
+      ROUND(100*SUM("研发人员数") / SUM(SUM("研发人员数")) OVER (), 4) AS 研发人员占比,
+      
+
+    FROM rpt01
+    GROUP BY
+      COALESCE("产业", '——'),
+      COALESCE("行业门类", '——'),
+    ORDER BY 产业 DESC, 门类 DESC;
+
+- sheet: 民企
+  sql: |
+    SELECT
+      COALESCE("产业", '——') AS 产业,
+      COALESCE("行业门类", '——') AS 门类,
+
+      -- 单位数量及占比
+      COUNT(*) AS 数量,
+      ROUND(100*COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 数量占比,
+
+      -- 营业成本及占比
+      SUM("营业成本") AS 营业成本合计,
+      ROUND(100*SUM("营业成本") / SUM(SUM("营业成本")) OVER (), 4) AS 营业成本占比,
+
+      -- 利润及占比
+      SUM("营业利润") AS 收入合计,
+      ROUND(100*SUM("营业利润") / SUM(SUM("营业利润")) OVER (), 4) AS 营业利润占比,
+
+      -- 从业人数及占比
+      SUM("期末从业人数") AS 人数合计,
+      ROUND(100*SUM("期末从业人数") / SUM(SUM("期末从业人数")) OVER (), 4) AS 人数占比,
+      ROUND(SUM("期末从业人数")::numeric / NULLIF(COUNT(*), 0), 0) AS 户均人数,
+
+      -- 女性人数及占比
+      SUM("其中女性从业人数") AS 女性人数合计,
+      ROUND(100*SUM("其中女性从业人数") / SUM(SUM("其中女性从业人数")) OVER (), 4) AS 女性占比,
+
+      -- 薪酬及占比
+      SUM("应付职工薪酬") * 10 AS 薪酬合计（千元）,
+      ROUND(100*SUM("应付职工薪酬") / SUM(SUM("应付职工薪酬")) OVER (), 4) AS 薪酬占比,
+      ROUND(SUM("应付职工薪酬")::numeric / NULLIF(SUM("期末从业人数"), 0) * 10000, 4) AS 人均薪酬（元）,
+
+      -- 增加值及占比
+      SUM("增加值") AS 增加值合计,
+      ROUND(100*SUM("增加值") / SUM(SUM("增加值")) OVER (), 4) AS 增加值占比,
+
+      -- 营业收入及占比
+      SUM("营业收入") AS 营业收入合计,
+      ROUND(100*SUM("营业收入") / SUM(SUM("营业收入")) OVER (), 4) AS 营业收入占比,
+      ROUND(SUM("营业收入")::numeric / NULLIF(COUNT(*), 0) * 10000, 4) AS 户均营业收入,
+
+      -- 资产及占比
+      SUM("资产总计") AS 资产合计,
+      ROUND(100*SUM("资产总计") / SUM(SUM("资产总计")) OVER (), 4) AS 资产占比,
+
+      --负债及占比
+      SUM("负债合计") AS 负债合计,
+      ROUND(100*SUM("负债合计") / SUM(SUM("负债合计")) OVER (), 4) AS 负债占比,
+
+      -- 税收及占比
+      SUM("应交增值税") AS 应交增值税合计,
+      SUM("税金及附加") AS 税金及附加合计,
+      SUM("税收合计") AS 税收收入,
+      ROUND(100*SUM("税收合计") / SUM(SUM("税收合计")) OVER (), 4) AS 税收收入占比,
+
+      -- 研发费用及占比
+      SUM("研发费用") AS 研发费用合计,
+      ROUND(100*SUM("研发费用") / SUM(SUM("研发费用")) OVER (), 4) AS 研发费用占比,
+
+      -- 研发人员及占比
+      SUM("研发人员数") AS 研发人员合计,
+      ROUND(100*SUM("研发人员数") / SUM(SUM("研发人员数")) OVER (), 4) AS 研发人员占比,
+    FROM rpt01
+    WHERE "登记注册类别（代码）" IN (112, 119, 121, 129, 133, 134, 140, 150, 190)
+    GROUP BY
+      COALESCE("产业", '——'),
+      COALESCE("行业门类", '——'),
+    ORDER BY 产业 DESC, 门类 DESC;
+
+
+- sheet: 一套表
+  sql: |
+    SELECT
+      COALESCE("产业", '——') AS 产业,
+      COALESCE("行业门类", '——') AS 门类,
+
+      -- 单位数量及占比
+      COUNT(*) AS 数量,
+      ROUND(100*COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 数量占比,
+
+      -- 营业成本及占比
+      SUM("营业成本") AS 营业成本合计,
+      ROUND(100*SUM("营业成本") / SUM(SUM("营业成本")) OVER (), 4) AS 营业成本占比,
+
+
+      -- 利润及占比
+      SUM("营业利润") AS 收入合计,
+      ROUND(100*SUM("营业利润") / SUM(SUM("营业利润")) OVER (), 4) AS 营业利润占比,
+
+      -- 从业人数及占比
+      SUM("期末从业人数") AS 人数合计,
+      ROUND(100*SUM("期末从业人数") / SUM(SUM("期末从业人数")) OVER (), 4) AS 人数占比,
+      ROUND(SUM("期末从业人数")::numeric / NULLIF(COUNT(*), 0), 0) AS 户均人数,
+
+      -- 女性人数及占比
+      SUM("其中女性从业人数") AS 女性人数合计,
+      ROUND(100*SUM("其中女性从业人数") / SUM(SUM("其中女性从业人数")) OVER (), 4) AS 女性占比,
+
+      -- 薪酬及占比
+      SUM("应付职工薪酬") * 10 AS 薪酬合计（千元）,
+      ROUND(100*SUM("应付职工薪酬") / SUM(SUM("应付职工薪酬")) OVER (), 4) AS 薪酬占比,
+      ROUND(SUM("应付职工薪酬")::numeric / NULLIF(SUM("期末从业人数"), 0) * 100000, 4) AS 人均薪酬（元）,
+
+      -- 增加值及占比
+      SUM("增加值") AS 增加值合计,
+      ROUND(100*SUM("增加值") / SUM(SUM("增加值")) OVER (), 4) AS 增加值占比,
+
+      -- 营业收入及占比
+      SUM("营业收入") AS 营业收入合计,
+      ROUND(100*SUM("营业收入") / SUM(SUM("营业收入")) OVER (), 4) AS 营业收入占比,
+      ROUND(SUM("营业收入")::numeric / NULLIF(COUNT(*), 0) * 10000, 4) AS 户均营业收入,
+
+      -- 资产及占比
+      SUM("资产总计") AS 资产合计,
+      ROUND(100*SUM("资产总计") / SUM(SUM("资产总计")) OVER (), 4) AS 资产占比,
+      
+      -- 负债及占比
+      SUM("负债合计") AS 负债合计,
+      ROUND(100*SUM("负债合计") / SUM(SUM("负债合计")) OVER (), 4) AS 负债占比,
+
+      -- 税收及占比
+      SUM("应交增值税") AS 应交增值税合计,
+      SUM("税金及附加") AS 税金及附加合计,
+      SUM("税收合计") AS 税收收入,
+      ROUND(100*SUM("税收合计") / SUM(SUM("税收合计")) OVER (), 4) AS 税收收入占比,
+
+      -- 研发费用及占比
+      SUM("研发费用") AS 研发费用合计,
+      ROUND(100*SUM("研发费用") / SUM(SUM("研发费用")) OVER (), 4) AS 研发费用占比,
+
+      -- 研发人员及占比
+      SUM("研发人员数") AS 研发人员合计,
+      ROUND(100*SUM("研发人员数") / SUM(SUM("研发人员数")) OVER (), 4) AS 研发人员占比,
+      
+
+    FROM rpt01
+    WHERE "是否一套表单位" = 'true'
+    GROUP BY
+      COALESCE("产业", '——'),
+      COALESCE("行业门类", '——'),
+    ORDER BY 产业 DESC, 门类 DESC;
+
+- sheet: 一套表民企
+  sql: |
+    SELECT
+      COALESCE("产业", '——') AS 产业,
+      COALESCE("行业门类", '——') AS 门类,
+
+      -- 单位数量及占比
+      COUNT(*) AS 数量,
+      ROUND(100*COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 数量占比,
+
+      -- 营业成本及占比
+      SUM("营业成本") AS 营业成本合计,
+      ROUND(100*SUM("营业成本") / SUM(SUM("营业成本")) OVER (), 4) AS 营业成本占比,
+
+
+      -- 利润及占比
+      SUM("营业利润") AS 收入合计,
+      ROUND(100*SUM("营业利润") / SUM(SUM("营业利润")) OVER (), 4) AS 营业利润占比,
+
+      -- 从业人数及占比
+      SUM("期末从业人数") AS 人数合计,
+      ROUND(100*SUM("期末从业人数") / SUM(SUM("期末从业人数")) OVER (), 4) AS 人数占比,
+      ROUND(SUM("期末从业人数")::numeric / NULLIF(COUNT(*), 0), 0) AS 户均人数,
+
+      -- 女性人数及占比
+      SUM("其中女性从业人数") AS 女性人数合计,
+      ROUND(100*SUM("其中女性从业人数") / SUM(SUM("其中女性从业人数")) OVER (), 4) AS 女性占比,
+
+      -- 薪酬及占比
+      SUM("应付职工薪酬") * 10 AS 薪酬合计（千元）,
+      ROUND(100*SUM("应付职工薪酬") / SUM(SUM("应付职工薪酬")) OVER (), 4) AS 薪酬占比,
+      ROUND(SUM("应付职工薪酬")::numeric / NULLIF(SUM("期末从业人数"), 0) * 10000, 4) AS 人均薪酬（元）,
+
+      -- 增加值及占比
+      SUM("增加值") AS 增加值合计,
+      ROUND(100*SUM("增加值") / SUM(SUM("增加值")) OVER (), 4) AS 增加值占比,
+
+      -- 营业收入及占比
+      SUM("营业收入") AS 营业收入合计,
+      ROUND(100*SUM("营业收入") / SUM(SUM("营业收入")) OVER (), 4) AS 营业收入占比,
+      ROUND(SUM("营业收入")::numeric / NULLIF(COUNT(*), 0) * 10000, 4) AS 户均营业收入,
+
+      -- 资产及占比
+      SUM("资产总计") AS 资产合计,
+      ROUND(100*SUM("资产总计") / SUM(SUM("资产总计")) OVER (), 4) AS 资产占比,
+      
+      -- 负债及占比
+      SUM("负债合计") AS 负债合计,
+      ROUND(100*SUM("负债合计") / SUM(SUM("负债合计")) OVER (), 4) AS 负债占比,
+
+      -- 税收及占比
+      SUM("应交增值税") AS 应交增值税合计,
+      SUM("税金及附加") AS 税金及附加合计,
+      SUM("税收合计") AS 税收收入,
+      ROUND(100*SUM("税收合计") / SUM(SUM("税收合计")) OVER (), 4) AS 税收收入占比,
+
+      -- 研发费用及占比
+      SUM("研发费用") AS 研发费用合计,
+      ROUND(100*SUM("研发费用") / SUM(SUM("研发费用")) OVER (), 4) AS 研发费用占比,
+
+      -- 研发人员及占比
+      SUM("研发人员数") AS 研发人员合计,
+      ROUND(100*SUM("研发人员数") / SUM(SUM("研发人员数")) OVER (), 4) AS 研发人员占比,
+      
+
+    FROM rpt01
+    WHERE "是否一套表单位" = 'true' AND "登记注册类别（代码）" IN (112, 119, 121, 129, 133, 134, 140, 150, 190)
+    GROUP BY
+      COALESCE("产业", '——'),
+      COALESCE("行业门类", '——'),
+    ORDER BY 产业 DESC, 门类 DESC;
+
+
+- sheet: 非一套表
+  sql: |
+    SELECT
+      COALESCE("产业", '——') AS 产业,
+      COALESCE("行业门类", '——') AS 门类,
+
+      -- 单位数量及占比
+      COUNT(*) AS 数量,
+      ROUND(100*COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 数量占比,
+
+      -- 营业成本及占比
+      SUM("营业成本") AS 营业成本合计,
+      ROUND(100*SUM("营业成本") / SUM(SUM("营业成本")) OVER (), 4) AS 营业成本占比,
+
+
+      -- 利润及占比
+      SUM("营业利润") AS 收入合计,
+      ROUND(100*SUM("营业利润") / SUM(SUM("营业利润")) OVER (), 4) AS 营业利润占比,
+
+      -- 从业人数及占比
+      SUM("期末从业人数") AS 人数合计,
+      ROUND(100*SUM("期末从业人数") / SUM(SUM("期末从业人数")) OVER (), 4) AS 人数占比,
+      ROUND(SUM("期末从业人数")::numeric / NULLIF(COUNT(*), 0), 0) AS 户均人数,
+
+      -- 女性人数及占比
+      SUM("其中女性从业人数") AS 女性人数合计,
+      ROUND(100*SUM("其中女性从业人数") / SUM(SUM("其中女性从业人数")) OVER (), 4) AS 女性占比,
+
+      -- 薪酬及占比
+      SUM("应付职工薪酬") * 10 AS 薪酬合计（千元）,
+      ROUND(100*SUM("应付职工薪酬") / SUM(SUM("应付职工薪酬")) OVER (), 4) AS 薪酬占比,
+      ROUND(SUM("应付职工薪酬")::numeric / NULLIF(SUM("期末从业人数"), 0) * 10000, 4) AS 人均薪酬（元）,
+
+      -- 增加值及占比
+      SUM("增加值") AS 增加值合计,
+      ROUND(100*SUM("增加值") / SUM(SUM("增加值")) OVER (), 4) AS 增加值占比,
+
+      -- 营业收入及占比
+      SUM("营业收入") AS 营业收入合计,
+      ROUND(100*SUM("营业收入") / SUM(SUM("营业收入")) OVER (), 4) AS 营业收入占比,
+      ROUND(SUM("营业收入")::numeric / NULLIF(COUNT(*), 0) * 10000, 4) AS 户均营业收入,
+
+      -- 资产及占比
+      SUM("资产总计") AS 资产合计,
+      ROUND(100*SUM("资产总计") / SUM(SUM("资产总计")) OVER (), 4) AS 资产占比,
+      
+      -- 负债及占比
+      SUM("负债合计") AS 负债合计,
+      ROUND(100*SUM("负债合计") / SUM(SUM("负债合计")) OVER (), 4) AS 负债占比,
+
+      -- 税收及占比
+      SUM("应交增值税") AS 应交增值税合计,
+      SUM("税金及附加") AS 税金及附加合计,
+      SUM("税收合计") AS 税收收入,
+      ROUND(100*SUM("税收合计") / SUM(SUM("税收合计")) OVER (), 4) AS 税收收入占比,
+
+      -- 研发费用及占比
+      SUM("研发费用") AS 研发费用合计,
+      ROUND(100*SUM("研发费用") / SUM(SUM("研发费用")) OVER (), 4) AS 研发费用占比,
+
+      -- 研发人员及占比
+      SUM("研发人员数") AS 研发人员合计,
+      ROUND(100*SUM("研发人员数") / SUM(SUM("研发人员数")) OVER (), 4) AS 研发人员占比,
+      
+
+    FROM rpt01
+    WHERE "是否一套表单位" = 'false'
+    GROUP BY
+      COALESCE("产业", '——'),
+      COALESCE("行业门类", '——'),
+    ORDER BY 产业 DESC, 门类 DESC;
+
+- sheet: 非一套表民企
+  sql: |
+    SELECT
+      COALESCE("产业", '——') AS 产业,
+      COALESCE("行业门类", '——') AS 门类,
+
+      -- 单位数量及占比
+      COUNT(*) AS 数量,
+      ROUND(100*COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 数量占比,
+
+      -- 营业成本及占比
+      SUM("营业成本") AS 营业成本合计,
+      ROUND(100*SUM("营业成本") / SUM(SUM("营业成本")) OVER (), 4) AS 营业成本占比,
+
+
+      -- 利润及占比
+      SUM("营业利润") AS 收入合计,
+      ROUND(100*SUM("营业利润") / SUM(SUM("营业利润")) OVER (), 4) AS 营业利润占比,
+
+      -- 从业人数及占比
+      SUM("期末从业人数") AS 人数合计,
+      ROUND(100*SUM("期末从业人数") / SUM(SUM("期末从业人数")) OVER (), 4) AS 人数占比,
+      ROUND(SUM("期末从业人数")::numeric / NULLIF(COUNT(*), 0), 0) AS 户均人数,
+
+      -- 女性人数及占比
+      SUM("其中女性从业人数") AS 女性人数合计,
+      ROUND(100*SUM("其中女性从业人数") / SUM(SUM("其中女性从业人数")) OVER (), 4) AS 女性占比,
+
+      -- 薪酬及占比
+      SUM("应付职工薪酬") * 10 AS 薪酬合计（千元）,
+      ROUND(100*SUM("应付职工薪酬") / SUM(SUM("应付职工薪酬")) OVER (), 4) AS 薪酬占比,
+      ROUND(SUM("应付职工薪酬")::numeric / NULLIF(SUM("期末从业人数"), 0) * 10000, 4) AS 人均薪酬（元）,
+
+      -- 增加值及占比
+      SUM("增加值") AS 增加值合计,
+      ROUND(100*SUM("增加值") / SUM(SUM("增加值")) OVER (), 4) AS 增加值占比,
+
+      -- 营业收入及占比
+      SUM("营业收入") AS 营业收入合计,
+      ROUND(100*SUM("营业收入") / SUM(SUM("营业收入")) OVER (), 4) AS 营业收入占比,
+      ROUND(SUM("营业收入")::numeric / NULLIF(COUNT(*), 0) * 10000, 4) AS 户均营业收入,
+
+      -- 资产及占比
+      SUM("资产总计") AS 资产合计,
+      ROUND(100*SUM("资产总计") / SUM(SUM("资产总计")) OVER (), 4) AS 资产占比,
+      
+      -- 负债及占比
+      SUM("负债合计") AS 负债合计,
+      ROUND(100*SUM("负债合计") / SUM(SUM("负债合计")) OVER (), 4) AS 负债占比,
+
+      -- 税收及占比
+      SUM("应交增值税") AS 应交增值税合计,
+      SUM("税金及附加") AS 税金及附加合计,
+      SUM("税收合计") AS 税收收入,
+      ROUND(100*SUM("税收合计") / SUM(SUM("税收合计")) OVER (), 4) AS 税收收入占比,
+
+      -- 研发费用及占比
+      SUM("研发费用") AS 研发费用合计,
+      ROUND(100*SUM("研发费用") / SUM(SUM("研发费用")) OVER (), 4) AS 研发费用占比,
+
+      -- 研发人员及占比
+      SUM("研发人员数") AS 研发人员合计,
+      ROUND(100*SUM("研发人员数") / SUM(SUM("研发人员数")) OVER (), 4) AS 研发人员占比,
+      
+
+    FROM rpt01
+    WHERE "是否一套表单位" = 'false' AND "登记注册类别（代码）" IN (112, 119, 121, 129, 133, 134, 140, 150, 190)
+    GROUP BY
+      COALESCE("产业", '——'),
+      COALESCE("行业门类", '——'),
+    ORDER BY 产业 DESC, 门类 DESC;
+
+
+- sheet: 一套表投资
+  sql: |
+    WITH unit_investment AS (
+      SELECT
+        "统一社会信用代码",
+        SUM(COALESCE("本年完成投资;本年", 0)) AS 投资额合计
+      FROM "606"
+      GROUP BY "统一社会信用代码"
+    ),
+    matched AS (
+      SELECT
+        COALESCE(r."产业", '——') AS 产业,
+        COALESCE(r."行业门类", '——') AS 行业门类,
+        u."统一社会信用代码",
+        u.投资额合计
+      FROM unit_investment u
+      JOIN rpt01 r
+        ON u."统一社会信用代码" = r."统一社会信用代码"
+    )
+
+    SELECT
+      产业,
+      行业门类,
+      COUNT(*) AS 单位数量,
+      SUM(投资额合计) AS 投资总额,
+      ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 单位占比,
+      ROUND(100.0 * SUM(投资额合计) / SUM(SUM(投资额合计)) OVER (), 4) AS 投资额占比
+    FROM matched
+    GROUP BY 产业, 行业门类
+    ORDER BY 投资总额 DESC;
+
+
+- sheet: 非一套表投资
+  sql: |
+    WITH unit_counts AS (
+      SELECT
+        "统一社会信用代码",
+        COUNT(*) AS 出现次数
+      FROM "611-5"
+      GROUP BY "统一社会信用代码"
+    ),
+    matched AS (
+      SELECT
+        r."统一社会信用代码",
+        COALESCE(r."产业", '——') AS 产业,
+        COALESCE(r."行业门类", '——') AS 行业门类
+      FROM unit_counts u
+      JOIN rpt01 r ON u."统一社会信用代码" = r."统一社会信用代码"
+    )
+
+    SELECT
+      产业,
+      行业门类,
+      COUNT(*) AS 数量,
+      ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 占比
+    FROM matched
+    GROUP BY 产业, 行业门类
+    ORDER BY 产业 DESC;
+
+- sheet: 一套表民企投资
+  sql: |
+    WITH unit_investment AS (
+      SELECT
+        "统一社会信用代码",
+        SUM(COALESCE("本年完成投资;本年", 0)) AS 投资额合计
+      FROM "606"
+      GROUP BY "统一社会信用代码"
+    ),
+    matched AS (
+      SELECT
+        COALESCE(r."产业", '——') AS 产业,
+        COALESCE(r."行业门类", '——') AS 行业门类,
+        u."统一社会信用代码",
+        u.投资额合计
+      FROM unit_investment u
+      JOIN rpt01 r
+        ON u."统一社会信用代码" = r."统一社会信用代码"
+      WHERE r."登记注册类别（代码）" IN (112, 119, 121, 129, 133, 134, 140, 150, 190)
+    )
+
+    SELECT
+      产业,
+      行业门类,
+      COUNT(*) AS 单位数量,
+      SUM(投资额合计) AS 投资总额,
+      ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 单位占比,
+      ROUND(100.0 * SUM(投资额合计) / SUM(SUM(投资额合计)) OVER (), 4) AS 投资额占比
+    FROM matched
+    GROUP BY 产业, 行业门类
+    ORDER BY 投资总额 DESC;
+
+
+
+- sheet: 非一套表民企投资
+  sql: |
+    WITH unit_investment AS (
+      SELECT
+        "统一社会信用代码",
+        SUM(COALESCE("本年完成投资;本年", 0)) AS 投资额合计
+      FROM "611-5"
+      GROUP BY "统一社会信用代码"
+    ),
+    matched AS (
+      SELECT
+        COALESCE(r."产业", '——') AS 产业,
+        COALESCE(r."行业门类", '——') AS 行业门类,
+        u."统一社会信用代码",
+        u.投资额合计
+      FROM unit_investment u
+      JOIN rpt01 r
+        ON u."统一社会信用代码" = r."统一社会信用代码"
+      WHERE r."登记注册类别（代码）" IN (112, 119, 121, 129, 133, 134, 140, 150, 190)
+    )
+
+    SELECT
+      产业,
+      行业门类,
+      COUNT(*) AS 单位数量,
+      SUM(投资额合计) AS 投资总额,
+      ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 单位占比,
+      ROUND(100.0 * SUM(投资额合计) / SUM(SUM(投资额合计)) OVER (), 4) AS 投资额占比
+    FROM matched
+    GROUP BY 产业, 行业门类
+    ORDER BY 投资总额 DESC;
+
+
+- sheet: 民企规模
+  sql: |
+    SELECT
+      COALESCE(r."产业", '——') AS 产业分类,
+      COALESCE(r."行业门类", '——') AS 行业门类,
+      COUNT(*) AS 总数量,
+      COUNT(CASE WHEN r."单位规模（代码）" = '1' THEN 1 END) AS 大型,
+      COUNT(CASE WHEN r."单位规模（代码）" = '2' THEN 1 END) AS 中型,
+      COUNT(CASE WHEN r."单位规模（代码）" = '3' THEN 1 END) AS 小型,
+      COUNT(CASE WHEN r."单位规模（代码）" = '4' THEN 1 END) AS 微型,
+      COUNT(CASE WHEN r."单位规模（代码）" IS NULL THEN 1 END) AS 未判定
+    FROM
+      rpt01 r
+      WHERE TRIM(r."数据来源") NOT IN ('611-6', '611-7') AND TRIM(r."数据来源") != '' AND r."登记注册类别（代码）" IN (112, 119, 121, 129, 133, 134, 140, 150, 190)
+
+    GROUP BY
+      COALESCE(r."产业", '——'),
+      COALESCE(r."行业门类", '——')
+    ORDER BY
+      产业分类 DESC,
+      行业门类 DESC;
+- sheet: 街道
+  sql: |
+    SELECT
+      COALESCE("经营地 - 乡（镇、街道办事处）", '——') AS 街道,
+
+      -- 单位数量及占比
+      COUNT(*) AS 数量,
+      ROUND(100*COUNT(*) / SUM(COUNT(*)) OVER (), 4) AS 数量占比
+
+    FROM rpt01
+    GROUP BY
+      COALESCE("经营地 - 乡（镇、街道办事处）", '——'),
+    ORDER BY 街道 DESC;

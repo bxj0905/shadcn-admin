@@ -2,7 +2,11 @@
 功能 Flow：数据收集
 """
 from prefect import flow, get_run_logger
-from ..tasks.collect_raw_files import collect_raw_files
+
+try:
+    from ..tasks.collect_raw_files import collect_raw_files
+except ImportError:
+    from tasks.collect_raw_files import collect_raw_files
 
 
 @flow(name="data-collection-flow")
