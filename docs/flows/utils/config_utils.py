@@ -119,7 +119,7 @@ def load_sensitive_fields() -> list[str]:
     从 sensitive_fields.yaml 配置文件加载敏感字段列表
     优先级：
     1. 从 S3 中 flow 代码同目录的 config/sensitive_fields.yaml 读取
-       路径格式：{flow_name}/flow/config/sensitive_fields.yaml
+       新目录结构路径格式：{flow_name}/config/sensitive_fields.yaml
     2. 使用内嵌的默认配置
     
     返回: 敏感字段名列表
@@ -128,10 +128,10 @@ def load_sensitive_fields() -> list[str]:
     
     # 优先级 1: 从 S3 读取配置文件（与 flow 代码同目录）
     try:
-        # 获取 flow 的基础路径
+        # 获取 flow 的基础路径（例如 my-flow/），新的目录结构中配置文件位于 {flow_name}/config 下
         flow_base_path = _get_flow_base_path()
-        # 配置文件路径：与 flow 代码同目录结构
-        config_key = f"{flow_base_path}flow/config/sensitive_fields.yaml"
+        # 配置文件路径：与 flow 代码同目录结构的新布局
+        config_key = f"{flow_base_path}config/sensitive_fields.yaml"
         
         s3_block = S3Bucket.load("rustfs-s3storage")
         bucket_name = s3_block.bucket_name
@@ -180,12 +180,89 @@ def load_sensitive_fields() -> list[str]:
     return _get_default_sensitive_fields()
 
 
+def load_encryption_fields() -> list[str]:
+    """从 encrypt.yaml 配置文件加载需要加密的字段列表。
+
+    配置示例::
+
+        sensitive_fields:
+          - 统一社会信用代码
+          - 单位详细名称
+          - 法人单位详细名称
+          - 法人单位详细地址
+
+    优先级：
+    1. 从 S3 中 flow 代码同目录的 config/encrypt.yaml 读取
+       路径格式：{flow_name}/config/encrypt.yaml
+    2. 使用内嵌的默认配置（同上示例）
+    """
+    config = None
+
+    try:
+        # 获取 flow 的基础路径（例如 my-flow/），新的目录结构中配置文件位于 {flow_name}/config 下
+        flow_base_path = _get_flow_base_path()
+        config_key = f"{flow_base_path}config/encrypt.yaml"
+
+        s3_block = S3Bucket.load("rustfs-s3storage")
+        bucket_name = s3_block.bucket_name
+
+        # 使用 dataflow bucket（与 flow 代码存储在同一 bucket）
+        dataflow_bucket = os.environ.get("RUSTFS_DATAFLOW_BUCKET", "dataflow")
+
+        # 获取 S3 客户端
+        access_key = getattr(s3_block, "aws_access_key_id", None) or os.environ.get(
+            "RUSTFS_ACCESS_KEY", os.environ.get("MINIO_ROOT_USER")
+        )
+        secret_key = getattr(s3_block, "aws_secret_access_key", None) or os.environ.get(
+            "RUSTFS_SECRET_KEY", os.environ.get("MINIO_ROOT_PASSWORD")
+        )
+        endpoint_url = getattr(s3_block, "endpoint_url", None) or os.environ.get("RUSTFS_ENDPOINT")
+
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=endpoint_url,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key,
+        )
+
+        # 从 dataflow bucket 读取配置文件
+        try:
+            response = s3_client.get_object(Bucket=dataflow_bucket, Key=config_key)
+            content = response["Body"].read().decode("utf-8")
+            config = yaml.safe_load(content)
+        except Exception:
+            # 如果 dataflow bucket 中不存在，尝试从当前 bucket 读取
+            try:
+                response = s3_client.get_object(Bucket=bucket_name, Key=config_key)
+                content = response["Body"].read().decode("utf-8")
+                config = yaml.safe_load(content)
+            except Exception:
+                pass
+    except Exception:
+        # S3 读取失败，使用默认配置
+        pass
+
+    if config and isinstance(config, dict):
+        fields = config.get("sensitive_fields")
+        if isinstance(fields, list):
+            # 只保留字符串条目
+            return [str(name) for name in fields]
+
+    # 默认配置（与文档示例保持一致）
+    return [
+        "统一社会信用代码",
+        "单位详细名称",
+        "法人单位详细名称",
+        "法人单位详细地址",
+    ]
+
+
 def load_sql_column_types() -> dict[str, str]:
     """
     从 column_types.yaml 配置文件加载字段名到数据类型的映射
     优先级：
     1. 从 S3 中 flow 代码同目录的 config/column_types.yaml 读取
-       路径格式：{flow_name}/flow/config/column_types.yaml
+       新目录结构路径格式：{flow_name}/config/column_types.yaml
     2. 使用内嵌的默认配置
     
     返回: {字段名: 类型} 的字典，类型为 'DECIMAL', 'INTEGER', 'TEXT', 'BOOLEAN'
@@ -195,10 +272,10 @@ def load_sql_column_types() -> dict[str, str]:
     
     # 优先级 1: 从 S3 读取配置文件（与 flow 代码同目录）
     try:
-        # 获取 flow 的基础路径
+        # 获取 flow 的基础路径（例如 my-flow/），新的目录结构中配置文件位于 {flow_name}/config 下
         flow_base_path = _get_flow_base_path()
-        # 配置文件路径：与 flow 代码同目录结构
-        config_key = f"{flow_base_path}flow/config/column_types.yaml"
+        # 配置文件路径：与 flow 代码同目录结构的新布局
+        config_key = f"{flow_base_path}config/column_types.yaml"
         
         s3_block = S3Bucket.load("rustfs-s3storage")
         bucket_name = s3_block.bucket_name

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   createOnDropHandler,
   dragAndDropFeature,
@@ -249,7 +249,7 @@ function FlowFileTree({
                     {...(item.getRenameInputProps ? item.getRenameInputProps() : {})}
                   />
                 ) : (
-                  <span className='truncate'>{item.getItemName()}</span>
+                  <span className='whitespace-nowrap'>{item.getItemName()}</span>
                 )}
               </div>
             </TreeItemLabel>
@@ -327,22 +327,7 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
   const [basePrefix, setBasePrefix] = useState<string>('')
-
-  const addChildToParent = (parentId: string, childId: string) => {
-    setItems((prev) => {
-      const parent = prev[parentId]
-      if (!parent || !Array.isArray(parent.children)) return prev
-      if (parent.children.includes(childId)) return prev
-
-      return {
-        ...prev,
-        [parentId]: {
-          ...parent,
-          children: [...parent.children, childId],
-        },
-      }
-    })
-  }
+  const [mainRelativePath, setMainRelativePath] = useState<string | undefined>(undefined)
 
   const resolveParentId = () => {
     const current = items[selectedId]
@@ -410,25 +395,36 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
   const renameSubtree = (
     oldId: string,
     newId: string,
-    itemsMap: Record<string, Item>,
+    source: Record<string, Item>,
   ): Record<string, Item> => {
-    const result: Record<string, Item> = {}
-    Object.entries(itemsMap).forEach(([key, value]) => {
-      if (key === 'root') {
-        result[key] = value
-        return
+    const updated: Record<string, Item> = {}
+    const oldItem = source[oldId]
+    if (!oldItem) return updated
+
+    const isFolder = Array.isArray(oldItem.children)
+    const newChildren = isFolder
+      ? (oldItem.children ?? []).map((cid) => cid.replace(`${oldId}/`, `${newId}/`))
+      : oldItem.children
+
+    const newBaseName = newId.split('/').pop() ?? oldItem.name
+
+    updated[newId] = {
+      ...oldItem,
+      name: newBaseName,
+      children: isFolder ? newChildren : undefined,
+      fileExtension: !isFolder ? inferExtension(newBaseName) || oldItem.fileExtension : undefined,
+    }
+
+    if (isFolder) {
+      for (const childId of oldItem.children ?? []) {
+        Object.assign(
+          updated,
+          renameSubtree(childId, childId.replace(`${oldId}/`, `${newId}/`), source),
+        )
       }
-      const mappedKey = key === oldId || key.startsWith(`${oldId}/`) ? key.replace(oldId, newId) : key
-      if (Array.isArray(value.children)) {
-        result[mappedKey] = {
-          ...value,
-          children: value.children.map((cid) => (cid === oldId || cid.startsWith(`${oldId}/`) ? cid.replace(oldId, newId) : cid)),
-        }
-      } else {
-        result[mappedKey] = value
-      }
-    })
-    return result
+    }
+
+    return updated
   }
 
   const applyRename = (id: string, newName: string) => {
@@ -441,8 +437,11 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
     const newId = parentId === 'root' ? trimmed : `${parentId}/${trimmed}`
 
     setItems((prev) => {
-      const parent = prev[parentId]
-      if (!parent || !Array.isArray(parent.children)) return prev
+      const prevParent = prev[parentId]
+      const parent: Item = prevParent ?? { name: parentId, children: [] }
+      const parentChildren = Array.isArray(parent.children)
+        ? parent.children
+        : []
 
       const withoutOld: Record<string, Item> = {}
       Object.keys(prev).forEach((key) => {
@@ -452,7 +451,10 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
       })
 
       const cloned = renameSubtree(id, newId, prev)
-      const newChildren = parent.children.map((cid) => (cid === id ? newId : cid))
+      const newChildren = parentChildren.map((cid) => (cid === id ? newId : cid))
+      if (!newChildren.includes(newId)) {
+        newChildren.push(newId)
+      }
       return {
         ...withoutOld,
         ...cloned,
@@ -522,9 +524,9 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
       const codeContent = fileCodes[id] ?? DEFAULT_CODE
       const ext = item.fileExtension
       const flowType: 'main' | 'feature' | 'subflow' | undefined =
-        path === 'flow/main.py'
+        path === 'main.py'
           ? 'main'
-          : path.startsWith('flow/feature_flows/')
+          : path.startsWith('feature_flows/')
             ? 'subflow'
             : ext
               ? 'feature'
@@ -540,6 +542,9 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
   }
 
   const pickMainCode = () => {
+    if (mainRelativePath && fileCodes[mainRelativePath] !== undefined) {
+      return fileCodes[mainRelativePath]
+    }
     if (fileCodes['flow/main.py'] !== undefined) return fileCodes['flow/main.py']
     const pyEntry = Object.entries(fileCodes).find(([key]) => key.endsWith('.py'))
     if (pyEntry) return pyEntry[1]
@@ -599,20 +604,25 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
         const { items: loadedItems, fileCodes: loadedCodes } = buildTreeFromFiles(res.files)
         const folderIds = Object.keys(loadedItems).filter((id) => Array.isArray(loadedItems[id].children))
         const firstFileId = Object.keys(loadedItems).find((id) => !Array.isArray(loadedItems[id].children))
+        const preferredFileId =
+          res.mainRelativePath && loadedItems[res.mainRelativePath] && !Array.isArray(loadedItems[res.mainRelativePath].children)
+            ? res.mainRelativePath
+            : firstFileId
         setItems(loadedItems)
         setFileCodes(loadedCodes)
         setBasePrefix(res.prefix)
+        setMainRelativePath(res.mainRelativePath)
         setFlowName(flow.name)
         setTreeState({
           expandedItems: folderIds,
-          selectedItems: firstFileId ? [firstFileId] : ['root'],
+          selectedItems: preferredFileId ? [preferredFileId] : ['root'],
         })
-        setSelectedId(firstFileId ?? 'root')
-        setSelectedIsFolder(firstFileId ? false : true)
-        if (firstFileId) {
-          const item = loadedItems[firstFileId]
+        setSelectedId(preferredFileId ?? 'root')
+        setSelectedIsFolder(preferredFileId ? false : true)
+        if (preferredFileId) {
+          const item = loadedItems[preferredFileId]
           const ext = item?.fileExtension ?? inferExtension(item?.name)
-          setCode(loadedCodes[firstFileId] ?? '')
+          setCode(loadedCodes[preferredFileId] ?? '')
           setLanguage(languageFromExt(ext))
         } else {
           setCode('')
@@ -651,7 +661,7 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
           </div>
         </DialogHeader>
 
-        <div className='flex flex-1 gap-4 px-6 pb-6 pt-4'>
+        <div className='flex flex-1 min-h-0 gap-4 px-6 pb-6 pt-4'>
           <div className='flex h-full w-72 flex-col gap-2 border-r pr-4'>
             <div className='flex items-center justify-between gap-2'>
               <span className='text-xs font-semibold text-muted-foreground'>FILES</span>
@@ -679,7 +689,7 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
               </div>
             </div>
 
-            <div className='flex-1 overflow-hidden rounded-md border'>
+            <div className='flex-1 min-h-0 overflow-auto rounded-md border'>
               {loading ? (
                 <div className='flex h-full items-center justify-center text-xs text-muted-foreground'>加载中...</div>
               ) : (
@@ -723,7 +733,6 @@ export function PrefectFlowEditDialog({ open, onOpenChange, flow }: PrefectFlowE
                   options={{
                     minimap: { enabled: false },
                     fontSize: 13,
-                    scrollbar: { verticalScrollbarSize: 6, horizontalScrollbarSize: 6 },
                   }}
                 />
               )}

@@ -274,9 +274,17 @@ export async function uploadPrefectFlowFiles(
 
 export async function fetchPrefectFlowFiles(
   flowId: string,
-): Promise<{ files: Array<{ path: string; code: string }>; prefix: string }> {
+): Promise<{
+  files: Array<{ path: string; code: string }>;
+  prefix: string;
+  mainRelativePath?: string;
+}> {
   try {
-    const res = await axios.get<{ files: Array<{ path: string; code: string }>; prefix: string }>(
+    const res = await axios.get<{
+      files: Array<{ path: string; code: string }>;
+      prefix: string;
+      mainRelativePath?: string;
+    }>(
       `/api/prefect/flows/${encodeURIComponent(flowId)}/files`,
     )
     return res.data

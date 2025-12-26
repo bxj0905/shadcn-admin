@@ -8,6 +8,12 @@ from .config_utils import (
     _get_default_sensitive_fields,
     load_sensitive_fields,
     load_sql_column_types,
+    load_encryption_fields,
+)
+from .crypto_utils import (
+    load_aes_siv_key,
+    aes_siv_encrypt_to_b64,
+    aes_siv_decrypt_from_b64,
 )
 
 __all__ = [
@@ -19,5 +25,9 @@ __all__ = [
     "_get_default_sensitive_fields",
     "load_sensitive_fields",
     "load_sql_column_types",
+    "load_encryption_fields",
+    "load_aes_siv_key",
+    "aes_siv_encrypt_to_b64",
+    "aes_siv_decrypt_from_b64",
 ]
 

@@ -49,19 +49,15 @@ interface Item {
 }
 
 const initialItems: Record<string, Item> = {
-  flow: {
-    children: ['flow/main.py', 'flow/tasks', 'flow/feature_flows', 'flow/utils', 'flow/config'],
-    name: 'flow',
-  },
-  'flow/main.py': { fileExtension: 'py', name: 'main.py' },
-  'flow/tasks': { children: [], name: 'tasks' },
-  'flow/feature_flows': { children: [], name: 'feature_flows' },
-  'flow/utils': { children: [], name: 'utils' },
-  'flow/config': { children: [], name: 'config' },
   root: {
-    children: ['flow'],
+    children: ['main.py', 'tasks', 'feature_flows', 'utils', 'config'],
     name: 'Project Root',
   },
+  'main.py': { fileExtension: 'py', name: 'main.py' },
+  tasks: { children: [], name: 'tasks' },
+  feature_flows: { children: [], name: 'feature_flows' },
+  utils: { children: [], name: 'utils' },
+  config: { children: [], name: 'config' },
 }
 
 interface FlowFileTreeProps {
@@ -188,7 +184,7 @@ function FlowFileTree({
                     {...(item.getRenameInputProps ? item.getRenameInputProps() : {})}
                   />
                 ) : (
-                  <span className='truncate'>{item.getItemName()}</span>
+                  <span className='whitespace-nowrap'>{item.getItemName()}</span>
                 )}
               </div>
             </TreeItemLabel>
@@ -255,17 +251,17 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
   const [items, setItems] = useState(initialItems)
   const [treeVersion, setTreeVersion] = useState(0)
   const [treeState, setTreeState] = useState<Partial<TreeState<Item>>>({
-    expandedItems: ['root', 'flow'],
-    selectedItems: ['flow'],
+    expandedItems: ['root'],
+    selectedItems: ['root'],
   })
   const [flowName, setFlowName] = useState<string>('my_flow')
   const [code, setCode] = useState<string>(DEFAULT_CODE)
   const [language, setLanguage] = useState<string>('python')
   const [selectedIsFolder, setSelectedIsFolder] = useState<boolean>(true)
   const [nextId, setNextId] = useState(1)
-  const [selectedId, setSelectedId] = useState<string>('flow')
+  const [selectedId, setSelectedId] = useState<string>('root')
   const [fileCodes, setFileCodes] = useState<Record<string, string>>({
-    'flow/main.py': DEFAULT_CODE,
+    'main.py': DEFAULT_CODE,
   })
   const [saving, setSaving] = useState(false)
 
@@ -278,7 +274,7 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
     if (lastSlash > 0) {
       return selectedId.slice(0, lastSlash)
     }
-    return 'flow'
+    return 'root'
   }
 
   const addChildToParent = (parentId: string, childId: string, child: Item) => {
@@ -387,15 +383,18 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
   const applyRename = (id: string, newName: string) => {
     const trimmed = newName.trim()
     if (!trimmed || trimmed.includes('/')) return false
-    if (id === 'flow') return false
+    if (id === 'root') return false
 
     const parentSlash = id.lastIndexOf('/')
-    const parentId = parentSlash > 0 ? id.slice(0, parentSlash) : 'flow'
-    const newId = parentId === 'flow' ? `flow/${trimmed}` : `${parentId}/${trimmed}`
+    const parentId = parentSlash > 0 ? id.slice(0, parentSlash) : 'root'
+    const newId = parentId === 'root' ? trimmed : `${parentId}/${trimmed}`
 
     setItems((prev) => {
-      const parent = prev[parentId]
-      if (!parent || !Array.isArray(parent.children)) return prev
+      const prevParent = prev[parentId]
+      const parent: Item = prevParent ?? { name: parentId, children: [] }
+      const parentChildren = Array.isArray(parent.children)
+        ? parent.children
+        : []
 
       const withoutOld: Record<string, Item> = {}
       Object.keys(prev).forEach((key) => {
@@ -405,7 +404,10 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
       })
 
       const cloned = renameSubtree(id, newId, prev)
-      const newChildren = parent.children.map((cid) => (cid === id ? newId : cid))
+      const newChildren = parentChildren.map((cid) => (cid === id ? newId : cid))
+      if (!newChildren.includes(newId)) {
+        newChildren.push(newId)
+      }
       return {
         ...withoutOld,
         ...cloned,
@@ -481,9 +483,9 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
       const codeContent = fileCodes[id] ?? DEFAULT_CODE
       const ext = item.fileExtension
       const flowType: 'main' | 'feature' | 'subflow' | undefined =
-        id === 'flow/main.py'
+        path === 'main.py'
           ? 'main'
-          : path.startsWith('flow/feature_flows/')
+          : path.startsWith('feature_flows/')
             ? 'subflow'
             : ext
               ? 'feature'
@@ -501,8 +503,8 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
   const resetAllStates = () => {
     setItems(initialItems)
     setTreeState({
-      expandedItems: ['root', 'flow'],
-      selectedItems: ['flow'],
+      expandedItems: ['root'],
+      selectedItems: ['root'],
     })
     setTreeVersion((v) => v + 1)
     setFlowName('my_flow')
@@ -510,9 +512,9 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
     setLanguage('python')
     setSelectedIsFolder(true)
     setNextId(1)
-    setSelectedId('flow')
+    setSelectedId('root')
     setFileCodes({
-      'flow/main.py': DEFAULT_CODE,
+      'main.py': DEFAULT_CODE,
     })
   }
 
@@ -523,7 +525,7 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
       toast.error('请输入 Flow 名称')
       return
     }
-    const basePrefix = sanitizePrefix(trimmedName) || 'flow/'
+    const basePrefix = sanitizePrefix(trimmedName)
     setSaving(true)
     try {
       const files = collectFilesPayload()
@@ -533,7 +535,7 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
       }
       await uploadPrefectFlowFiles(files, { basePrefix })
 
-      const mainCode = fileCodes['flow/main.py'] ?? DEFAULT_CODE
+      const mainCode = fileCodes['main.py'] ?? DEFAULT_CODE
       await createPrefectFlow({
         name: trimmedName,
         code: mainCode,
@@ -582,7 +584,7 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
           </div>
         </DialogHeader>
 
-        <div className='flex flex-1 gap-4 px-6 pb-6 pt-4'>
+        <div className='flex flex-1 min-h-0 gap-4 px-6 pb-6 pt-4'>
           {/* 左侧文件 Tree */}
           <div className='flex h-full w-72 flex-col gap-2 border-r pr-4'>
             <div className='flex items-center justify-between gap-2'>
@@ -608,7 +610,7 @@ export function PrefectFlowNewDialog({ open, onOpenChange }: PrefectFlowNewDialo
                 </Button>
               </div>
             </div>
-            <div className='flex-1 min-h-0'>
+            <div className='flex-1 min-h-0 overflow-auto'>
               <FlowFileTree
                 key={treeVersion}
                 items={items}

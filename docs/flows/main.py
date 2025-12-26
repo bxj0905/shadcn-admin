@@ -31,12 +31,14 @@ try:
     from .feature_flows.data_conversion_flow import data_conversion_flow
     from .feature_flows.data_cleaning_flow import data_cleaning_flow
     from .feature_flows.data_validation_flow import data_validation_flow
+    from .feature_flows.data_encryption_flow import data_encryption_flow
 except ImportError:
     # 如果相对导入失败，使用绝对导入（当前目录已在 sys.path 中）
     from feature_flows.data_collection_flow import data_collection_flow
     from feature_flows.data_conversion_flow import data_conversion_flow
     from feature_flows.data_cleaning_flow import data_cleaning_flow
     from feature_flows.data_validation_flow import data_validation_flow
+    from feature_flows.data_encryption_flow import data_encryption_flow
 
 
 @flow(name="dataset-etl-flow")
@@ -71,9 +73,28 @@ def dataset_etl_flow(prefix: str = ""):
     # 步骤 3: 数据清洗（功能 Flow）
     cleaned_files = data_cleaning_flow(prefix, parquet_files)
 
+    # 步骤 3.5: 数值校准（功能 Flow）
+    validation_result = data_validation_flow(prefix, cleaned_files)
+
+    if isinstance(validation_result, list):
+        calibrated_files = validation_result
+    else:
+        logger.warning(
+            "Data validation flow did not return calibrated file list; "
+            "skipping encryption and aggregation."
+        )
+        return {
+            "uploaded_count": len(uploaded_files),
+            "parquet_count": len(parquet_files),
+            "cleaned_count": len(cleaned_files),
+            "validation_result": validation_result,
+            "status": "validation_pending",
+        }
+
+    # 步骤 4: 加密敏感字段（功能 Flow）
+    secure_files = data_encryption_flow(prefix, calibrated_files)
+
     # TODO: 步骤 3.5-5 将在后续完善
-    # 步骤 3.5: 数值校准（子 Flow）
-    # 步骤 4: 加密敏感字段
     # 步骤 5: 数据汇总
 
     logger.info("Dataset ETL pipeline completed successfully")
@@ -82,6 +103,8 @@ def dataset_etl_flow(prefix: str = ""):
         "uploaded_count": len(uploaded_files),
         "parquet_count": len(parquet_files),
         "cleaned_count": len(cleaned_files),
+        "calibrated_count": len(calibrated_files),
+        "secure_count": len(secure_files),
         "status": "in_progress",
     }
 
